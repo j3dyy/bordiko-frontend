@@ -1,5 +1,6 @@
 // Client mirror of the gateway wire protocol (see packages/shared/protocol.ts,
-// the canonical spec). Hive-specific state shape is included for the renderer.
+// the canonical spec). Game-specific state shapes (Hive) are included for the
+// dedicated renderer; other games use the generic legal-move renderer.
 
 export interface HivePiece {
   player: 0 | 1;
@@ -14,14 +15,16 @@ export interface HiveG {
 }
 
 export interface MoveDescriptor {
-  type: "place" | "move" | "pass";
+  type: string;
   payload?: Record<string, unknown>;
 }
 
 export interface StateMsg {
   t: "state";
   matchId: string;
-  G: HiveG;
+  // G is the player's redacted game state. Typed loosely so any game renders;
+  // the Hive renderer narrows it to HiveG.
+  G: any;
   turn: number;
   currentPlayer: string;
   playOrder: string[];
@@ -37,4 +40,49 @@ export interface MatchSummary {
   gameId: string;
   players: string[];
   currentPlayer: string;
+}
+
+/* ------------------------------- accounts --------------------------------- */
+
+export interface User {
+  id: string;
+  displayName: string;
+  avatarUrl: string;
+}
+
+export interface Providers {
+  providers: string[]; // e.g. ["google","github"]
+  dev: boolean;
+}
+
+/* -------------------------------- lobby ----------------------------------- */
+
+export interface LobbyPlayer {
+  id: string;
+  name: string;
+}
+
+export interface Lobby {
+  id: string;
+  gameId: string;
+  host: string;
+  seats: number;
+  players: LobbyPlayer[];
+  matchId?: string;
+  status: "open" | "started";
+  createdAt: string;
+}
+
+/* ----------------------------- leaderboard -------------------------------- */
+
+export interface LeaderRow {
+  userId: string;
+  displayName: string;
+  avatarUrl: string;
+  rating: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  games: number;
+  winRate: number;
 }

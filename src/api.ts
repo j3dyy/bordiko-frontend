@@ -1,29 +1,99 @@
-import type { MatchSummary } from "./wire.ts";
+import type { Lobby, LeaderRow, Providers, User } from "./wire.ts";
 
-// Gateway base URL (REST proxy + WebSocket live here). Override at build/dev time
-// with VITE_GATEWAY_URL.
+// Gateway base URL (auth + REST proxy + WebSocket all live here). Override at
+// build/dev time with VITE_GATEWAY_URL.
 export const GATEWAY: string =
   (import.meta as { env?: Record<string, string> }).env?.VITE_GATEWAY_URL ||
   "http://localhost:8080";
 
+// Every request carries the session cookie (login is required to play).
+async function req(path: string, init?: RequestInit): Promise<Response> {
+  return fetch(`${GATEWAY}${path}`, { credentials: "include", ...init });
+}
+
+async function json<T>(res: Response, label: string): Promise<T> {
+  if (!res.ok) throw new Error(`${label}: ${res.status} ${await res.text()}`);
+  return (await res.json()) as T;
+}
+
+/* --------------------------------- auth ----------------------------------- */
+
+export async function fetchMe(): Promise<User | null> {
+  const res = await req("/auth/me");
+  if (res.status === 401) return null;
+  return json<User>(res, "me");
+}
+
+export async function fetchProviders(): Promise<Providers> {
+  return json<Providers>(await req("/auth/providers"), "providers");
+}
+
+// Top-level navigation to the provider (or dev) login. Not fetch — the browser
+// follows redirects to the OAuth consent screen and back.
+export function loginURL(provider: string, name?: string): string {
+  const q = name ? `?name=${encodeURIComponent(name)}` : "";
+  return `${GATEWAY}/auth/${provider}/login${q}`;
+}
+
+export async function logout(): Promise<void> {
+  await req("/auth/logout", { method: "POST" });
+}
+
+/* -------------------------------- catalog --------------------------------- */
+
 export async function listGames(): Promise<string[]> {
-  const res = await fetch(`${GATEWAY}/api/games`);
-  if (!res.ok) throw new Error(`listGames: ${res.status}`);
-  const data = (await res.json()) as { games: string[] };
-  return data.games;
+  const data = await json<{ games: string[] }>(await req("/api/games"), "listGames");
+  return data.games ?? [];
 }
 
-export async function createMatch(gameId: string, players: string[]): Promise<MatchSummary> {
-  const res = await fetch(`${GATEWAY}/api/matches`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ gameId, players }),
-  });
-  if (!res.ok) throw new Error(`createMatch: ${res.status} ${await res.text()}`);
-  return (await res.json()) as MatchSummary;
+/* --------------------------------- lobby ---------------------------------- */
+
+export async function listLobbies(): Promise<Lobby[]> {
+  const data = await json<{ lobbies: Lobby[] }>(await req("/api/lobby"), "listLobbies");
+  return data.lobbies ?? [];
 }
 
-export function wsURL(matchId: string, playerId: string): string {
+export async function createLobby(gameId: string, seats = 2): Promise<Lobby> {
+  return json<Lobby>(
+    await req("/api/lobby", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ gameId, seats }),
+    }),
+    "createLobby",
+  );
+}
+
+export async function getLobby(id: string): Promise<Lobby> {
+  return json<Lobby>(await req(`/api/lobby/${encodeURIComponent(id)}`), "getLobby");
+}
+
+export async function joinLobby(id: string): Promise<Lobby> {
+  return json<Lobby>(
+    await req(`/api/lobby/${encodeURIComponent(id)}/join`, { method: "POST" }),
+    "joinLobby",
+  );
+}
+
+export async function cancelLobby(id: string): Promise<void> {
+  await req(`/api/lobby/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+/* ----------------------------- leaderboard -------------------------------- */
+
+export async function fetchLeaderboard(gameId: string): Promise<LeaderRow[]> {
+  const data = await json<{ entries: LeaderRow[] }>(
+    await req(`/api/leaderboard?gameId=${encodeURIComponent(gameId)}`),
+    "leaderboard",
+  );
+  return data.entries ?? [];
+}
+
+/* ------------------------------ websocket --------------------------------- */
+
+// The gateway authenticates the socket from the session cookie; playerId is
+// passed only as a hint (the server ignores it and uses the cookie identity).
+export function wsURL(matchId: string): string {
   const base = GATEWAY.replace(/^http/, "ws");
-  return `${base}/ws?matchId=${encodeURIComponent(matchId)}&playerId=${encodeURIComponent(playerId)}`;
+  return `${base}/ws?matchId=${encodeURIComponent(matchId)}`;
 }

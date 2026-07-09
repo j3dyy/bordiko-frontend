@@ -21,7 +21,7 @@ export function useMatch(matchId: string, playerId: string): MatchConnection {
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    const ws = new WebSocket(wsURL(matchId, playerId));
+    const ws = new WebSocket(wsURL(matchId));
     wsRef.current = ws;
     ws.onopen = () => setConnected(true);
     ws.onclose = () => setConnected(false);
