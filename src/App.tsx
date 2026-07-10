@@ -18,8 +18,10 @@ type View =
   | { screen: "game"; matchId: string; gameId: string }
   | { screen: "leaderboard" };
 
-// The view is mirrored in the URL hash so a refresh (or deep link) restores it —
-// most importantly, staying in a live game and reconnecting.
+// The view is mirrored in the URL path (History API) so links are clean and
+// shareable, and a refresh/deep-link restores it — most importantly, staying in
+// a live game and reconnecting. Deep links need the nginx SPA fallback
+// (try_files … /index.html) shipped in the web image.
 function viewToPath(v: View): string {
   switch (v.screen) {
     case "detail": return `/games/${encodeURIComponent(v.gameId)}`;
@@ -31,8 +33,8 @@ function viewToPath(v: View): string {
   }
 }
 
-function hashToView(hash: string): View {
-  const seg = hash.replace(/^#/, "").split("/").filter(Boolean).map(decodeURIComponent);
+function pathToView(pathname: string): View {
+  const seg = pathname.split("/").filter(Boolean).map(decodeURIComponent);
   if (seg[0] === "games" && seg[1]) return { screen: "detail", gameId: seg[1] };
   if (seg[0] === "me") return { screen: "profile" };
   if (seg[0] === "leaderboard") return { screen: "leaderboard" };
@@ -43,18 +45,19 @@ function hashToView(hash: string): View {
 
 export function App() {
   const { user, loading, logout } = useAuth();
-  const [view, setView] = useState<View>(() => hashToView(window.location.hash));
+  const [view, setView] = useState<View>(() => pathToView(window.location.pathname));
 
   useEffect(() => {
-    const onHash = () => setView(hashToView(window.location.hash));
-    window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
+    // Back/forward buttons.
+    const onPop = () => setView(pathToView(window.location.pathname));
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
   }, []);
 
   const navigate = useCallback((v: View) => {
     const path = viewToPath(v);
-    if (`#${path}` === window.location.hash) setView(v);
-    else window.location.hash = path; // fires hashchange → setView
+    if (window.location.pathname !== path) window.history.pushState(null, "", path);
+    setView(v);
   }, []);
 
   const goHome = useCallback(() => navigate({ screen: "home" }), [navigate]);

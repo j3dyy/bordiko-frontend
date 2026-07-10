@@ -13,4 +13,6 @@ RUN npx vite build
 
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
+# SPA fallback so clean-path deep links (/games/hive, /play/{id}) don't 404.
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
