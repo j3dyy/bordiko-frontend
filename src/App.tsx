@@ -7,6 +7,7 @@ import { Game } from "./Game.tsx";
 import { Leaderboard } from "./Leaderboard.tsx";
 import type { Lobby } from "./wire.ts";
 
+
 type View =
   | { screen: "home" }
   | { screen: "waiting"; lobby: Lobby }
