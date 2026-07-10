@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "./auth.tsx";
 import { Login } from "./Login.tsx";
 import { Home } from "./Home.tsx";
@@ -14,13 +14,50 @@ type View =
   | { screen: "home" }
   | { screen: "detail"; gameId: string }
   | { screen: "profile" }
-  | { screen: "waiting"; lobby: Lobby }
+  | { screen: "waiting"; lobbyId: string }
   | { screen: "game"; matchId: string; gameId: string }
   | { screen: "leaderboard" };
 
+// The view is mirrored in the URL hash so a refresh (or deep link) restores it —
+// most importantly, staying in a live game and reconnecting.
+function viewToPath(v: View): string {
+  switch (v.screen) {
+    case "detail": return `/games/${encodeURIComponent(v.gameId)}`;
+    case "profile": return "/me";
+    case "leaderboard": return "/leaderboard";
+    case "waiting": return `/waiting/${encodeURIComponent(v.lobbyId)}`;
+    case "game": return `/play/${encodeURIComponent(v.matchId)}/${encodeURIComponent(v.gameId)}`;
+    default: return "/";
+  }
+}
+
+function hashToView(hash: string): View {
+  const seg = hash.replace(/^#/, "").split("/").filter(Boolean).map(decodeURIComponent);
+  if (seg[0] === "games" && seg[1]) return { screen: "detail", gameId: seg[1] };
+  if (seg[0] === "me") return { screen: "profile" };
+  if (seg[0] === "leaderboard") return { screen: "leaderboard" };
+  if (seg[0] === "waiting" && seg[1]) return { screen: "waiting", lobbyId: seg[1] };
+  if (seg[0] === "play" && seg[1] && seg[2]) return { screen: "game", matchId: seg[1], gameId: seg[2] };
+  return { screen: "home" };
+}
+
 export function App() {
   const { user, loading, logout } = useAuth();
-  const [view, setView] = useState<View>({ screen: "home" });
+  const [view, setView] = useState<View>(() => hashToView(window.location.hash));
+
+  useEffect(() => {
+    const onHash = () => setView(hashToView(window.location.hash));
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+
+  const navigate = useCallback((v: View) => {
+    const path = viewToPath(v);
+    if (`#${path}` === window.location.hash) setView(v);
+    else window.location.hash = path; // fires hashchange → setView
+  }, []);
+
+  const goHome = useCallback(() => navigate({ screen: "home" }), [navigate]);
 
   if (loading) {
     return (
@@ -32,7 +69,6 @@ export function App() {
 
   if (!user) return <Login />;
 
-  const goHome = () => setView({ screen: "home" });
   const inGame = view.screen === "game";
 
   return (
@@ -51,20 +87,20 @@ export function App() {
             </button>
             <button
               className={view.screen === "leaderboard" ? "nav-link active" : "nav-link"}
-              onClick={() => setView({ screen: "leaderboard" })}
+              onClick={() => navigate({ screen: "leaderboard" })}
             >
               Leaderboards
             </button>
             <button
               className={view.screen === "profile" ? "nav-link active" : "nav-link"}
-              onClick={() => setView({ screen: "profile" })}
+              onClick={() => navigate({ screen: "profile" })}
             >
               Profile
             </button>
           </nav>
         )}
         <div className="user">
-          <button className="user-chip" onClick={() => setView({ screen: "profile" })} title="Your profile">
+          <button className="user-chip" onClick={() => navigate({ screen: "profile" })} title="Your profile">
             {user.avatarUrl && <img src={user.avatarUrl} alt="" className="avatar" />}
             <span className="user-name">{user.displayName}</span>
           </button>
@@ -76,9 +112,9 @@ export function App() {
 
       {view.screen === "home" && (
         <Home
-          onWaiting={(lobby) => setView({ screen: "waiting", lobby })}
-          onGame={(matchId, gameId) => setView({ screen: "game", matchId, gameId })}
-          onOpen={(gameId) => setView({ screen: "detail", gameId })}
+          onWaiting={(lobby) => navigate({ screen: "waiting", lobbyId: lobby.id })}
+          onGame={(matchId, gameId) => navigate({ screen: "game", matchId, gameId })}
+          onOpen={(gameId) => navigate({ screen: "detail", gameId })}
         />
       )}
 
@@ -86,20 +122,20 @@ export function App() {
         <GameDetail
           gameId={view.gameId}
           myId={user.id}
-          onWaiting={(lobby) => setView({ screen: "waiting", lobby })}
-          onGame={(matchId, gameId) => setView({ screen: "game", matchId, gameId })}
+          onWaiting={(lobby) => navigate({ screen: "waiting", lobbyId: lobby.id })}
+          onGame={(matchId, gameId) => navigate({ screen: "game", matchId, gameId })}
           onBack={goHome}
         />
       )}
 
       {view.screen === "profile" && (
-        <Profile user={user} onOpenGame={(gameId) => setView({ screen: "detail", gameId })} onBack={goHome} />
+        <Profile user={user} onOpenGame={(gameId) => navigate({ screen: "detail", gameId })} onBack={goHome} />
       )}
 
       {view.screen === "waiting" && (
         <Waiting
-          lobby={view.lobby}
-          onStart={(matchId, gameId) => setView({ screen: "game", matchId, gameId })}
+          lobbyId={view.lobbyId}
+          onStart={(matchId, gameId) => navigate({ screen: "game", matchId, gameId })}
           onCancel={goHome}
         />
       )}

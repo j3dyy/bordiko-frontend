@@ -72,8 +72,26 @@ export async function listLobbies(): Promise<Lobby[]> {
   return data.lobbies ?? [];
 }
 
+// Thrown by create/join when the user is already in an unfinished match, so the
+// caller can route them back into it ("resume") instead of erroring.
+export interface ActiveMatchError extends Error {
+  active: { matchId: string; gameId: string };
+}
+
+async function lobbyResult(res: Response, label: string): Promise<Lobby> {
+  if (res.status === 409) {
+    const body = await res.json().catch(() => ({}) as Record<string, string>);
+    if (body.error === "active_match") {
+      throw Object.assign(new Error("active_match"), {
+        active: { matchId: body.matchId, gameId: body.gameId },
+      });
+    }
+  }
+  return json<Lobby>(res, label);
+}
+
 export async function createLobby(gameId: string, seats = 2): Promise<Lobby> {
-  return json<Lobby>(
+  return lobbyResult(
     await req("/api/lobby", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -88,7 +106,7 @@ export async function getLobby(id: string): Promise<Lobby> {
 }
 
 export async function joinLobby(id: string): Promise<Lobby> {
-  return json<Lobby>(
+  return lobbyResult(
     await req(`/api/lobby/${encodeURIComponent(id)}/join`, { method: "POST" }),
     "joinLobby",
   );

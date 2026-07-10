@@ -45,7 +45,9 @@ export function GameDetail({
       const lobby = await createLobby(gameId, m.minPlayers);
       onWaiting(lobby);
     } catch (e) {
-      setErr(String((e as Error).message ?? e));
+      const active = (e as { active?: { matchId: string; gameId: string } }).active;
+      if (active) onGame(active.matchId, active.gameId);
+      else setErr(String((e as Error).message ?? e));
     } finally {
       setBusy(false);
     }

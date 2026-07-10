@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { hexToPixel, hexPolygon, hexKey, parseHexKey } from "./hexgeom.ts";
+import { HivePieceDefs } from "./HivePieces.tsx";
 import type { StateMsg } from "./wire.ts";
 
 const SIZE = 30;
 const PLAYER_COLORS = ["#6C4CF1", "#FF6A3D"]; // player 0 (brand purple), player 1 (brand orange)
+const HEX = "50,4 89.8,27 89.8,73 50,96 10.2,73 10.2,27"; // pointy-top hex in a 0..100 box
 const KIND_NAMES: Record<string, string> = {
   Q: "Queen", B: "Beetle", G: "Grasshopper", S: "Spider", A: "Ant",
 };
@@ -101,10 +103,13 @@ export function HexBoard({
   }
 
   const myHand = myIndex >= 0 ? state.G.hands[myIndex] : {};
+  const myColor = PLAYER_COLORS[myIndex] ?? PLAYER_COLORS[0];
   const passOnly = legal.length === 1 && legal[0].type === "pass";
 
   return (
     <div className="board-wrap">
+      <HivePieceDefs />
+
       <svg className="board" viewBox={`${minX} ${minY} ${w} ${h}`} preserveAspectRatio="xMidYMid meet">
         {positioned.map(({ k, x, y }) => {
           const stack = state.G.board[k];
@@ -120,12 +125,15 @@ export function HexBoard({
                 stroke={isTarget ? "#17C0A4" : selectedFrom ? "#FFC53D" : movable ? "#B3A2F7" : "#E4E1E7"}
                 strokeWidth={isTarget || selectedFrom ? 3 : movable ? 2 : 1}
                 strokeDasharray={isTarget && !top ? "5,4" : undefined}
+                strokeLinejoin="round"
                 opacity={top ? 1 : isTarget ? 0.95 : 0.45}
               />
               {top && (
-                <text x={x} y={y} className="glyph" textAnchor="middle" dominantBaseline="central">
-                  {top.kind}
-                  {stack.length > 1 ? `·${stack.length}` : ""}
+                <use href={`#bug${top.kind}`} x={x - SIZE} y={y - SIZE} width={SIZE * 2} height={SIZE * 2} />
+              )}
+              {top && stack.length > 1 && (
+                <text x={x + SIZE * 0.46} y={y + SIZE * 0.5} className="stackcount" textAnchor="middle" dominantBaseline="central">
+                  {stack.length}
                 </text>
               )}
             </g>
@@ -153,8 +161,11 @@ export function HexBoard({
                   title={KIND_NAMES[kind]}
                   onClick={() => setSel({ mode: "place", kind })}
                 >
-                  {kind}
-                  <sub>{count}</sub>
+                  <svg className="piece-ico" viewBox="0 0 100 100" width="26" height="26">
+                    <polygon points={HEX} fill={myColor} />
+                    <use href={`#bug${kind}`} />
+                  </svg>
+                  <span className="piece-n">{count}</span>
                 </button>
               );
             })}

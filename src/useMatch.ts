@@ -1,23 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { wsURL } from "./api.ts";
-import type { StateMsg } from "./wire.ts";
+import type { ChatMsg, StateMsg } from "./wire.ts";
 
 export interface MatchConnection {
   state: StateMsg | null;
   connected: boolean;
   errors: string[];
+  chat: ChatMsg[];
   sendMove: (type: string, payload?: Record<string, unknown>) => void;
+  sendChat: (text: string) => void;
 }
 
 /**
  * Opens a WebSocket to the gateway for one player of one match and tracks the
  * latest redacted state the server pushes. The server is authoritative — this
- * hook only sends move intents and renders what comes back.
+ * hook only sends move/chat intents and renders what comes back.
  */
 export function useMatch(matchId: string, playerId: string): MatchConnection {
   const [state, setState] = useState<StateMsg | null>(null);
   const [connected, setConnected] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
+  const [chat, setChat] = useState<ChatMsg[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -29,6 +32,8 @@ export function useMatch(matchId: string, playerId: string): MatchConnection {
       const msg = JSON.parse(ev.data);
       if (msg.t === "state") {
         setState(msg as StateMsg);
+      } else if (msg.t === "chat") {
+        setChat((c) => [...c, msg as ChatMsg].slice(-200));
       } else if (msg.t === "move_err") {
         setErrors((e) => [`rejected: ${msg.reason}`, ...e].slice(0, 5));
       } else if (msg.t === "error") {
@@ -54,5 +59,15 @@ export function useMatch(matchId: string, playerId: string): MatchConnection {
     [matchId, playerId],
   );
 
-  return { state, connected, errors, sendMove };
+  const sendChat = useCallback(
+    (text: string) => {
+      const trimmed = text.trim();
+      const ws = wsRef.current;
+      if (!trimmed || !ws || ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({ t: "chat", matchId, text: trimmed, ts: Date.now() }));
+    },
+    [matchId],
+  );
+
+  return { state, connected, errors, chat, sendMove, sendChat };
 }

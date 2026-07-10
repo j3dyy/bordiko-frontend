@@ -41,6 +41,15 @@ export function Home({
     };
   }, [refresh]);
 
+  function resumeIfActive(e: unknown): boolean {
+    const active = (e as { active?: { matchId: string; gameId: string } }).active;
+    if (active) {
+      onGame(active.matchId, active.gameId);
+      return true;
+    }
+    return false;
+  }
+
   async function create(gameId: string) {
     setBusy(gameId);
     setErr("");
@@ -48,7 +57,7 @@ export function Home({
       const lobby = await createLobby(gameId, gameMeta(gameId).minPlayers);
       onWaiting(lobby);
     } catch (e) {
-      setErr(String((e as Error).message ?? e));
+      if (!resumeIfActive(e)) setErr(String((e as Error).message ?? e));
     } finally {
       setBusy("");
     }
@@ -62,7 +71,7 @@ export function Home({
       if (joined.status === "started" && joined.matchId) onGame(joined.matchId, joined.gameId);
       else onWaiting(joined);
     } catch (e) {
-      setErr(String((e as Error).message ?? e));
+      if (!resumeIfActive(e)) setErr(String((e as Error).message ?? e));
     } finally {
       setBusy("");
     }

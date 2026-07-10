@@ -42,6 +42,16 @@ export interface MatchSummary {
   currentPlayer: string;
 }
 
+// A live in-game chat line (relayed by the gateway to everyone in the match).
+export interface ChatMsg {
+  t: "chat";
+  matchId: string;
+  from: string; // sender user id
+  name: string; // sender display name
+  text: string;
+  ts: number;
+}
+
 /* ------------------------------- accounts --------------------------------- */
 
 export interface User {
