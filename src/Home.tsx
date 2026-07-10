@@ -304,7 +304,8 @@ function LiveNow({ lobbies, busy, onJoin }: { lobbies: Lobby[]; busy: string; on
         <div className="live-list">
           {lobbies.map((l) => {
             const m = gameMeta(l.gameId);
-            const hostName = l.seats.find((s) => s.player?.id === l.host)?.player?.name ?? l.seats.find((s) => s.player)?.player?.name ?? "?";
+            const seats = l.seats ?? [];
+            const hostName = seats.find((s) => s.player?.id === l.host)?.player?.name ?? seats.find((s) => s.player)?.player?.name ?? "?";
             return (
               <div className="live-row" key={l.id}>
                 <span className="live-emoji">{m.emoji}</span>
@@ -314,7 +315,7 @@ function LiveNow({ lobbies, busy, onJoin }: { lobbies: Lobby[]; busy: string; on
                     {l.mode === "teams" && <span className="live-mode">teams</span>}
                   </div>
                   <div className="live-seats">
-                    {seatedCount(l)}/{l.seats.length} seats · {hostName}
+                    {seatedCount(l)}/{seats.length} seats · {hostName}
                   </div>
                 </div>
                 <button className="small" disabled={busy === l.id} onClick={() => onJoin(l)}>

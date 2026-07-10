@@ -126,6 +126,21 @@ code { font-family: var(--font-mono); }
 .user-name { font-size: 14px; font-weight: 500; color: var(--text); }
 .avatar { width: 30px; height: 30px; border-radius: 9px; border: 1px solid var(--line); object-fit: cover; }
 
+/* ------------------------------ error boundary --------------------------- */
+
+.crash { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px;
+  background: radial-gradient(900px 500px at 50% -10%, #f4f1ff 0%, var(--canvas) 60%); }
+.crash-card { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 40px 34px;
+  width: 100%; max-width: 420px; text-align: center; box-shadow: var(--shadow-pop); }
+.crash-mark { width: 52px; height: 52px; margin: 0 auto 10px; display: block; }
+.crash-card h1 { margin: 4px 0 6px; font-size: 26px; font-weight: 700; }
+.crash-card p { color: var(--muted); margin: 0 0 22px; }
+.crash-actions { display: flex; gap: 10px; justify-content: center; }
+.crash-details { margin-top: 18px; text-align: left; }
+.crash-details summary { cursor: pointer; font-family: var(--font-mono); font-size: 12px; color: var(--muted-2); }
+.crash-details pre { margin: 10px 0 0; padding: 10px 12px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 10px; font-size: 12px; color: var(--danger); white-space: pre-wrap; word-break: break-word; overflow: auto; max-height: 30vh; }
+
 /* --------------------------------- login --------------------------------- */
 
 .login { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px;

@@ -93,12 +93,14 @@ export interface Lobby {
 }
 
 // Seated player count and whether the table is full — the seats array is the
-// source of truth now.
+// source of truth now. Null-safe so a stale/mismatched lobby payload degrades
+// gracefully instead of crashing the whole app.
 export function seatedCount(l: Lobby): number {
-  return l.seats.filter((s) => s.player).length;
+  return (l.seats ?? []).filter((s) => s.player).length;
 }
 export function lobbyFull(l: Lobby): boolean {
-  return l.seats.every((s) => s.player);
+  const seats = l.seats ?? [];
+  return seats.length > 0 && seats.every((s) => s.player);
 }
 
 /* -------------------------------- catalog --------------------------------- */
