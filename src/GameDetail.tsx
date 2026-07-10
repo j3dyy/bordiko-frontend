@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { createLobby, fetchCatalog, fetchLeaderboard } from "./api.ts";
-import { gameMeta, playersLabel } from "./games.ts";
+import { gameMeta, needsTableSetup, playersLabel } from "./games.ts";
 import { RateBar } from "./RateBar.tsx";
+import { TableSetup } from "./TableSetup.tsx";
 import type { CatalogGame, LeaderRow, Lobby } from "./wire.ts";
 
 // The marketplace game page: hero (art, creator, stats), a Play button, the
@@ -24,6 +25,7 @@ export function GameDetail({
   const [rows, setRows] = useState<LeaderRow[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [setup, setSetup] = useState(false); // "new table" chooser open
 
   useEffect(() => {
     let live = true;
@@ -38,11 +40,18 @@ export function GameDetail({
     };
   }, [gameId]);
 
-  async function play() {
+  function play() {
+    setErr("");
+    if (needsTableSetup(m)) setSetup(true);
+    else void create(m.minPlayers, "solo");
+  }
+
+  async function create(seats: number, mode: "solo" | "teams") {
     setBusy(true);
     setErr("");
     try {
-      const lobby = await createLobby(gameId, m.minPlayers);
+      const lobby = await createLobby(gameId, seats, mode);
+      setSetup(false);
       onWaiting(lobby);
     } catch (e) {
       const active = (e as { active?: { matchId: string; gameId: string } }).active;
@@ -141,6 +150,16 @@ export function GameDetail({
           <RateBar gameId={gameId} name={m.name} />
         </aside>
       </div>
+
+      {setup && (
+        <TableSetup
+          gameId={gameId}
+          busy={busy}
+          err={err}
+          onSubmit={(seats, mode) => create(seats, mode)}
+          onClose={() => setSetup(false)}
+        />
+      )}
     </div>
   );
 }

@@ -21,14 +21,22 @@ export function Game({
   playerId,
   gameId,
   onLeave,
+  onLeaderboard,
 }: {
   matchId: string;
   playerId: string;
   gameId: string;
   onLeave: () => void;
+  onLeaderboard?: () => void;
 }) {
   const { state, connected, errors, chat, sendMove, sendChat } = useMatch(matchId, playerId);
   const meta = gameMeta(gameId);
+  const [dismissed, setDismissed] = useState(false);
+
+  // Reset the "dismissed game-over" flag when we enter a different match.
+  useEffect(() => {
+    setDismissed(false);
+  }, [matchId]);
 
   return (
     <div className="game">
@@ -76,6 +84,60 @@ export function Game({
         </div>
 
         <Chat chat={chat} myId={playerId} connected={connected} onSend={sendChat} />
+      </div>
+
+      {state?.ended && !dismissed && (
+        <GameOver
+          result={state.result}
+          myId={playerId}
+          meta={meta}
+          onLeave={onLeave}
+          onLeaderboard={onLeaderboard}
+          onDismiss={() => setDismissed(true)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Shown when the match ends: who won, and where to go next. The session is over —
+// the board stops accepting moves (the server reports yourTurn=false once ended).
+function GameOver({
+  result,
+  myId,
+  meta,
+  onLeave,
+  onLeaderboard,
+  onDismiss,
+}: {
+  result: StateMsg["result"];
+  myId: string;
+  meta: ReturnType<typeof gameMeta>;
+  onLeave: () => void;
+  onLeaderboard?: () => void;
+  onDismiss: () => void;
+}) {
+  const draw = !!result?.draw;
+  const won = !draw && result?.winner === myId;
+  const outcome = draw ? "draw" : won ? "win" : "lose";
+  const title = draw ? "It's a draw" : won ? "You win!" : "You lose";
+  const emoji = draw ? "🤝" : won ? "🏆" : "😔";
+
+  return (
+    <div className="gameover-backdrop" onClick={onDismiss}>
+      <div className={`gameover ${outcome}`} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <button className="go-close" onClick={onDismiss} aria-label="view final board">×</button>
+        <div className="go-emoji">{emoji}</div>
+        <div className="go-eyebrow">{meta.emoji} {meta.name} · game over</div>
+        <h2 className="go-title">{title}</h2>
+        {result?.reason && <p className="go-reason">{result.reason}</p>}
+        <div className="go-actions">
+          {onLeaderboard && (
+            <button className="ghost" onClick={onLeaderboard}>View leaderboard</button>
+          )}
+          <button onClick={onLeave}>Back to games</button>
+        </div>
+        <button className="go-inspect" onClick={onDismiss}>View final board</button>
       </div>
     </div>
   );

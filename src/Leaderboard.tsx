@@ -3,16 +3,18 @@ import { fetchLeaderboard, listGames } from "./api.ts";
 import { gameMeta } from "./games.ts";
 import type { LeaderRow } from "./wire.ts";
 
-export function Leaderboard({ myId }: { myId: string }) {
+export function Leaderboard({ myId, initialGameId }: { myId: string; initialGameId?: string }) {
   const [games, setGames] = useState<string[]>([]);
-  const [gameId, setGameId] = useState<string>("");
+  const [gameId, setGameId] = useState<string>(initialGameId ?? "");
   const [rows, setRows] = useState<LeaderRow[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     listGames().then((gs) => {
       setGames(gs);
-      if (gs.length && !gameId) setGameId(gs[0]);
+      // Prefer the game we were opened for (e.g. from a game-over screen), else
+      // include it even if the catalog list is momentarily behind.
+      setGameId((cur) => cur || (initialGameId && gs.includes(initialGameId) ? initialGameId : gs[0]) || "");
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

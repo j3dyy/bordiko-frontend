@@ -98,12 +98,12 @@ async function lobbyResult(res: Response, label: string): Promise<Lobby> {
   return json<Lobby>(res, label);
 }
 
-export async function createLobby(gameId: string, seats = 2): Promise<Lobby> {
+export async function createLobby(gameId: string, seats = 2, mode: "solo" | "teams" = "solo"): Promise<Lobby> {
   return lobbyResult(
     await req("/api/lobby", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ gameId, seats }),
+      body: JSON.stringify({ gameId, seats, mode }),
     }),
     "createLobby",
   );
@@ -117,6 +117,35 @@ export async function joinLobby(id: string): Promise<Lobby> {
   return lobbyResult(
     await req(`/api/lobby/${encodeURIComponent(id)}/join`, { method: "POST" }),
     "joinLobby",
+  );
+}
+
+// Take a specific seat (choosing your partnership in teams mode); moves you if
+// you were already seated elsewhere.
+export async function sitSeat(id: string, seat: number): Promise<Lobby> {
+  return lobbyResult(
+    await req(`/api/lobby/${encodeURIComponent(id)}/sit`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ seat }),
+    }),
+    "sitSeat",
+  );
+}
+
+// Leave your seat but stay at the table.
+export async function standSeat(id: string): Promise<Lobby> {
+  return json<Lobby>(
+    await req(`/api/lobby/${encodeURIComponent(id)}/stand`, { method: "POST" }),
+    "standSeat",
+  );
+}
+
+// Host-only: begin the match once every seat is filled.
+export async function startLobby(id: string): Promise<Lobby> {
+  return json<Lobby>(
+    await req(`/api/lobby/${encodeURIComponent(id)}/start`, { method: "POST" }),
+    "startLobby",
   );
 }
 

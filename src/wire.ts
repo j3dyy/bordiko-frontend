@@ -72,15 +72,33 @@ export interface LobbyPlayer {
   name: string;
 }
 
+// One place at the table. `team` is the partnership id: in "teams" mode partners
+// sit across from each other (seat-index parity), in "solo" mode each seat is
+// its own team. `player` is null/absent when the seat is empty.
+export interface Seat {
+  index: number;
+  team: number;
+  player?: LobbyPlayer | null;
+}
+
 export interface Lobby {
   id: string;
   gameId: string;
   host: string;
-  seats: number;
-  players: LobbyPlayer[];
+  mode: "solo" | "teams";
+  seats: Seat[];
   matchId?: string;
   status: "open" | "started";
   createdAt: string;
+}
+
+// Seated player count and whether the table is full — the seats array is the
+// source of truth now.
+export function seatedCount(l: Lobby): number {
+  return l.seats.filter((s) => s.player).length;
+}
+export function lobbyFull(l: Lobby): boolean {
+  return l.seats.every((s) => s.player);
 }
 
 /* -------------------------------- catalog --------------------------------- */

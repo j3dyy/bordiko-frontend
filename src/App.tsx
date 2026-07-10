@@ -16,7 +16,7 @@ type View =
   | { screen: "profile" }
   | { screen: "waiting"; lobbyId: string }
   | { screen: "game"; matchId: string; gameId: string }
-  | { screen: "leaderboard" };
+  | { screen: "leaderboard"; gameId?: string };
 
 // The view is mirrored in the URL path (History API) so links are clean and
 // shareable, and a refresh/deep-link restores it — most importantly, staying in
@@ -26,7 +26,7 @@ function viewToPath(v: View): string {
   switch (v.screen) {
     case "detail": return `/games/${encodeURIComponent(v.gameId)}`;
     case "profile": return "/me";
-    case "leaderboard": return "/leaderboard";
+    case "leaderboard": return v.gameId ? `/leaderboard/${encodeURIComponent(v.gameId)}` : "/leaderboard";
     case "waiting": return `/waiting/${encodeURIComponent(v.lobbyId)}`;
     case "game": return `/play/${encodeURIComponent(v.matchId)}/${encodeURIComponent(v.gameId)}`;
     default: return "/";
@@ -37,7 +37,7 @@ function pathToView(pathname: string): View {
   const seg = pathname.split("/").filter(Boolean).map(decodeURIComponent);
   if (seg[0] === "games" && seg[1]) return { screen: "detail", gameId: seg[1] };
   if (seg[0] === "me") return { screen: "profile" };
-  if (seg[0] === "leaderboard") return { screen: "leaderboard" };
+  if (seg[0] === "leaderboard") return { screen: "leaderboard", gameId: seg[1] };
   if (seg[0] === "waiting" && seg[1]) return { screen: "waiting", lobbyId: seg[1] };
   if (seg[0] === "play" && seg[1] && seg[2]) return { screen: "game", matchId: seg[1], gameId: seg[2] };
   return { screen: "home" };
@@ -138,16 +138,23 @@ export function App() {
       {view.screen === "waiting" && (
         <Waiting
           lobbyId={view.lobbyId}
+          myId={user.id}
           onStart={(matchId, gameId) => navigate({ screen: "game", matchId, gameId })}
           onCancel={goHome}
         />
       )}
 
       {view.screen === "game" && (
-        <Game matchId={view.matchId} playerId={user.id} gameId={view.gameId} onLeave={goHome} />
+        <Game
+          matchId={view.matchId}
+          playerId={user.id}
+          gameId={view.gameId}
+          onLeave={goHome}
+          onLeaderboard={() => navigate({ screen: "leaderboard", gameId: view.gameId })}
+        />
       )}
 
-      {view.screen === "leaderboard" && <Leaderboard myId={user.id} />}
+      {view.screen === "leaderboard" && <Leaderboard myId={user.id} initialGameId={view.gameId} />}
     </div>
   );
 }

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createLobby, fetchCatalog, fetchLeaderboard, joinLobby, listLobbies } from "./api.ts";
-import { gameMeta, playersLabel } from "./games.ts";
+import { gameMeta, needsTableSetup, playersLabel } from "./games.ts";
+import { TableSetup } from "./TableSetup.tsx";
+import { seatedCount } from "./wire.ts";
 import type { CatalogGame, LeaderRow, Lobby } from "./wire.ts";
 
 export function Home({
@@ -19,6 +21,7 @@ export function Home({
   const [busy, setBusy] = useState<string>("");
   const [err, setErr] = useState("");
   const [loaded, setLoaded] = useState(false);
+  const [setupFor, setSetupFor] = useState<string>(""); // gameId whose "new table" chooser is open
   const timer = useRef<number | null>(null);
 
   const refresh = useCallback(async () => {
@@ -50,11 +53,23 @@ export function Home({
     return false;
   }
 
-  async function create(gameId: string) {
+  // "New table": games with a single fixed player count and no team option go
+  // straight to a table; anything with a choice opens the setup chooser first.
+  function newTable(gameId: string) {
+    setErr("");
+    if (needsTableSetup(gameMeta(gameId))) {
+      setSetupFor(gameId);
+    } else {
+      void create(gameId, gameMeta(gameId).minPlayers, "solo");
+    }
+  }
+
+  async function create(gameId: string, seats: number, mode: "solo" | "teams") {
     setBusy(gameId);
     setErr("");
     try {
-      const lobby = await createLobby(gameId, gameMeta(gameId).minPlayers);
+      const lobby = await createLobby(gameId, seats, mode);
+      setSetupFor("");
       onWaiting(lobby);
     } catch (e) {
       if (!resumeIfActive(e)) setErr(String((e as Error).message ?? e));
@@ -134,7 +149,7 @@ export function Home({
         ))}
       </div>
 
-      {showFeatured && <Featured game={featured} busy={busy === featured.id} onPlay={() => create(featured.id)} />}
+      {showFeatured && <Featured game={featured} busy={busy === featured.id} onPlay={() => newTable(featured.id)} />}
 
       <div className="discover-cols">
         <div className="discover-main">
@@ -144,7 +159,7 @@ export function Home({
           ) : (
             <div className="catalog">
               {filtered.map((c) => (
-                <GameCard key={c.id} game={c} busy={busy === c.id} onCreate={() => create(c.id)} onOpen={() => onOpen(c.id)} />
+                <GameCard key={c.id} game={c} busy={busy === c.id} onCreate={() => newTable(c.id)} onOpen={() => onOpen(c.id)} />
               ))}
             </div>
           )}
@@ -157,6 +172,16 @@ export function Home({
       </div>
 
       {err && <p className="error">{err}</p>}
+
+      {setupFor && (
+        <TableSetup
+          gameId={setupFor}
+          busy={busy === setupFor}
+          err={err}
+          onSubmit={(seats, mode) => create(setupFor, seats, mode)}
+          onClose={() => setSetupFor("")}
+        />
+      )}
     </div>
   );
 }
@@ -279,13 +304,17 @@ function LiveNow({ lobbies, busy, onJoin }: { lobbies: Lobby[]; busy: string; on
         <div className="live-list">
           {lobbies.map((l) => {
             const m = gameMeta(l.gameId);
+            const hostName = l.seats.find((s) => s.player?.id === l.host)?.player?.name ?? l.seats.find((s) => s.player)?.player?.name ?? "?";
             return (
               <div className="live-row" key={l.id}>
                 <span className="live-emoji">{m.emoji}</span>
                 <div className="live-meta">
-                  <div className="live-game">{m.name}</div>
+                  <div className="live-game">
+                    {m.name}
+                    {l.mode === "teams" && <span className="live-mode">teams</span>}
+                  </div>
                   <div className="live-seats">
-                    {l.players.length}/{l.seats} seats · {l.players[0]?.name ?? "?"}
+                    {seatedCount(l)}/{l.seats.length} seats · {hostName}
                   </div>
                 </div>
                 <button className="small" disabled={busy === l.id} onClick={() => onJoin(l)}>

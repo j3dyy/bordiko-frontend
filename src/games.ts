@@ -132,6 +132,14 @@ export function playersLabel(m: { minPlayers: number; maxPlayers: number }): str
   return m.minPlayers === m.maxPlayers ? `${m.minPlayers}` : `${m.minPlayers}–${m.maxPlayers}`;
 }
 
+// Whether "New table" should open the setup chooser first: true when the game
+// offers a choice of player count, or can be played in partnerships (an even
+// count of at least four). Single-count free-for-all games skip straight to the
+// table.
+export function needsTableSetup(m: { minPlayers: number; maxPlayers: number }): boolean {
+  return m.maxPlayers > m.minPlayers || (m.maxPlayers >= 4 && m.maxPlayers % 2 === 0);
+}
+
 function prettify(id: string): string {
   return id
     .split(/[-_]/)
