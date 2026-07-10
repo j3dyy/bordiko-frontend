@@ -4,12 +4,16 @@ import { Login } from "./Login.tsx";
 import { Home } from "./Home.tsx";
 import { Waiting } from "./Waiting.tsx";
 import { Game } from "./Game.tsx";
+import { GameDetail } from "./GameDetail.tsx";
+import { Profile } from "./Profile.tsx";
 import { Leaderboard } from "./Leaderboard.tsx";
 import type { Lobby } from "./wire.ts";
 
 
 type View =
   | { screen: "home" }
+  | { screen: "detail"; gameId: string }
+  | { screen: "profile" }
   | { screen: "waiting"; lobby: Lobby }
   | { screen: "game"; matchId: string; gameId: string }
   | { screen: "leaderboard" };
@@ -40,7 +44,7 @@ export function App() {
         {!inGame && (
           <nav className="nav">
             <button
-              className={view.screen === "home" || view.screen === "waiting" ? "nav-link active" : "nav-link"}
+              className={view.screen === "home" || view.screen === "waiting" || view.screen === "detail" ? "nav-link active" : "nav-link"}
               onClick={goHome}
             >
               Play
@@ -51,11 +55,19 @@ export function App() {
             >
               Leaderboards
             </button>
+            <button
+              className={view.screen === "profile" ? "nav-link active" : "nav-link"}
+              onClick={() => setView({ screen: "profile" })}
+            >
+              Profile
+            </button>
           </nav>
         )}
         <div className="user">
-          {user.avatarUrl && <img src={user.avatarUrl} alt="" className="avatar" />}
-          <span className="user-name">{user.displayName}</span>
+          <button className="user-chip" onClick={() => setView({ screen: "profile" })} title="Your profile">
+            {user.avatarUrl && <img src={user.avatarUrl} alt="" className="avatar" />}
+            <span className="user-name">{user.displayName}</span>
+          </button>
           <button className="ghost small" onClick={logout}>
             Sign out
           </button>
@@ -66,7 +78,22 @@ export function App() {
         <Home
           onWaiting={(lobby) => setView({ screen: "waiting", lobby })}
           onGame={(matchId, gameId) => setView({ screen: "game", matchId, gameId })}
+          onOpen={(gameId) => setView({ screen: "detail", gameId })}
         />
+      )}
+
+      {view.screen === "detail" && (
+        <GameDetail
+          gameId={view.gameId}
+          myId={user.id}
+          onWaiting={(lobby) => setView({ screen: "waiting", lobby })}
+          onGame={(matchId, gameId) => setView({ screen: "game", matchId, gameId })}
+          onBack={goHome}
+        />
+      )}
+
+      {view.screen === "profile" && (
+        <Profile user={user} onOpenGame={(gameId) => setView({ screen: "detail", gameId })} onBack={goHome} />
       )}
 
       {view.screen === "waiting" && (

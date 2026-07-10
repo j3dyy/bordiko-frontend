@@ -6,9 +6,11 @@ import type { CatalogGame, LeaderRow, Lobby } from "./wire.ts";
 export function Home({
   onWaiting,
   onGame,
+  onOpen,
 }: {
   onWaiting: (lobby: Lobby) => void;
   onGame: (matchId: string, gameId: string) => void;
+  onOpen: (gameId: string) => void;
 }) {
   const [catalog, setCatalog] = useState<CatalogGame[]>([]);
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
@@ -133,7 +135,7 @@ export function Home({
           ) : (
             <div className="catalog">
               {filtered.map((c) => (
-                <GameCard key={c.id} game={c} busy={busy === c.id} onCreate={() => create(c.id)} />
+                <GameCard key={c.id} game={c} busy={busy === c.id} onCreate={() => create(c.id)} onOpen={() => onOpen(c.id)} />
               ))}
             </div>
           )}
@@ -161,26 +163,29 @@ function Stars({ rating, count }: { rating: number; count: number }) {
   );
 }
 
-function GameCard({ game, busy, onCreate }: { game: CatalogGame; busy: boolean; onCreate: () => void }) {
+function GameCard({ game, busy, onCreate, onOpen }: { game: CatalogGame; busy: boolean; onCreate: () => void; onOpen: () => void }) {
   const m = gameMeta(game.id);
   return (
     <article className="game-card" style={{ ["--accent" as string]: m.accent }}>
-      <div className="gc-top">
-        <div className="game-emoji">{m.emoji}</div>
-        <span className="cat-pill">{m.category}</span>
-      </div>
-      <div className="gc-body">
-        <h3 className="gc-title">
-          {m.name}
-          {m.verified && <span className="verified" title="Verified creator">✓</span>}
-        </h3>
-        <div className="gc-creator">{m.author}</div>
-        <p className="gc-blurb">{m.blurb}</p>
-      </div>
-      <div className="gc-stats">
-        <Stars rating={game.rating} count={game.ratingCount} />
-        <span className="gc-plays">{game.plays.toLocaleString()} plays</span>
-        {game.live > 0 && <span className="gc-live">● {game.live} live</span>}
+      <div className="gc-open" onClick={onOpen} role="button" tabIndex={0}
+        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onOpen()}>
+        <div className="gc-top">
+          <div className="game-emoji">{m.emoji}</div>
+          <span className="cat-pill">{m.category}</span>
+        </div>
+        <div className="gc-body">
+          <h3 className="gc-title">
+            {m.name}
+            {m.verified && <span className="verified" title="Verified creator">✓</span>}
+          </h3>
+          <div className="gc-creator">{m.author}</div>
+          <p className="gc-blurb">{m.blurb}</p>
+        </div>
+        <div className="gc-stats">
+          <Stars rating={game.rating} count={game.ratingCount} />
+          <span className="gc-plays">{game.plays.toLocaleString()} plays</span>
+          {game.live > 0 && <span className="gc-live">● {game.live} live</span>}
+        </div>
       </div>
       <button disabled={busy} onClick={onCreate}>
         {busy ? "Creating…" : "New table"}
