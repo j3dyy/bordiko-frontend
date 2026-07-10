@@ -1,21 +1,39 @@
-import { useState } from "react";
-import { rateGame } from "./api.ts";
+import { useEffect, useState } from "react";
+import { fetchMyRating, rateGame } from "./api.ts";
 
 // A 5-star rater for a game. One rating per user (the server upserts); posting
-// again just updates it. Used on the live game screen and the game-detail page.
+// again just updates it. Loads the user's existing rating so it shows filled in.
+// Used on the live game screen and the game-detail page.
 export function RateBar({ gameId, name }: { gameId: string; name: string }) {
   const [mine, setMine] = useState(0);
   const [hover, setHover] = useState(0);
-  const [saved, setSaved] = useState(false);
+  const [rated, setRated] = useState(false);
   const [err, setErr] = useState("");
 
+  useEffect(() => {
+    let live = true;
+    fetchMyRating(gameId)
+      .then((stars) => {
+        if (live && stars > 0) {
+          setMine(stars);
+          setRated(true);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [gameId]);
+
   async function rate(stars: number) {
+    const prev = mine;
     setMine(stars);
     setErr("");
     try {
       await rateGame(gameId, stars);
-      setSaved(true);
+      setRated(true);
     } catch (e) {
+      setMine(prev);
       setErr(String((e as Error).message ?? e));
     }
   }
@@ -23,7 +41,7 @@ export function RateBar({ gameId, name }: { gameId: string; name: string }) {
   const shown = hover || mine;
   return (
     <div className="ratebar">
-      <span className="ratebar-label">{saved ? `Thanks — you rated ${name}` : `Enjoying ${name}? Rate it`}</span>
+      <span className="ratebar-label">{rated ? `You rated ${name} ${mine}★` : `Enjoying ${name}? Rate it`}</span>
       <div className="ratebar-stars" onMouseLeave={() => setHover(0)}>
         {[1, 2, 3, 4, 5].map((n) => (
           <button

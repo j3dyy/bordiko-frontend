@@ -65,6 +65,14 @@ export async function rateGame(gameId: string, stars: number): Promise<{ rating:
   );
 }
 
+// The signed-in user's own stars for a game (0 if unrated), to pre-fill the rater.
+export async function fetchMyRating(gameId: string): Promise<number> {
+  const res = await req(`/api/games/${encodeURIComponent(gameId)}/my-rating`);
+  if (!res.ok) return 0; // graceful on an older gateway
+  const data = (await res.json().catch(() => ({}))) as { stars?: number };
+  return data.stars ?? 0;
+}
+
 /* --------------------------------- lobby ---------------------------------- */
 
 export async function listLobbies(): Promise<Lobby[]> {
