@@ -10,7 +10,7 @@ export interface GameMeta {
   blurb: string;
   minPlayers: number;
   maxPlayers: number;
-  renderer: "hive" | "auto";
+  renderer: "hive" | "eights" | "auto";
   accent: string;
   emoji: string;
   category: string;
@@ -47,7 +47,7 @@ const KNOWN: Record<string, Omit<GameMeta, "id">> = {
     blurb: "Shed your hand by matching rank or suit. Eights are wild. Hidden hands.",
     minPlayers: 2,
     maxPlayers: 5,
-    renderer: "auto",
+    renderer: "eights",
     accent: "#17C0A4",
     emoji: "🃏",
     category: "Card Game",

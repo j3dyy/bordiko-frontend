@@ -303,6 +303,72 @@ code { font-family: var(--font-mono); }
 .piece.active { border-color: var(--brand); box-shadow: 0 0 0 3px var(--tint-purple); }
 .piece:hover:not(:disabled) { background: var(--card); border-color: var(--brand); }
 
+/* ------------------------------ crazy eights ----------------------------- */
+
+.eights { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+
+/* opponents — face-down fans up top */
+.eb-opponents { display: flex; justify-content: center; flex-wrap: wrap; gap: 34px; padding-top: 4px; min-height: 78px; }
+.eb-opp { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.eb-opp-fan { display: flex; }
+.eb-opp-card { margin-left: -30px; transform: rotate(calc((var(--i) - 2) * 6deg)); transform-origin: bottom center; }
+.eb-opp-card:first-child { margin-left: 0; }
+.eb-opp-count { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+
+/* table felt: deck + discard + active suit */
+.eb-table {
+  display: flex; align-items: center; justify-content: center; gap: 44px; flex-wrap: wrap;
+  background: radial-gradient(120% 92% at 50% 22%, color-mix(in srgb, var(--teal) 8%, #fff), var(--panel));
+  border: 1px solid var(--line); border-radius: 22px; padding: 30px 26px; box-shadow: var(--shadow-card); min-height: 216px;
+}
+
+.eb-deck { position: relative; background: none; border: 0; padding: 0; cursor: default; }
+.eb-deck:hover:not(:disabled) { background: none; }
+.eb-deck.can { cursor: pointer; }
+.eb-deck-stack { position: relative; border-radius: 12px; filter: drop-shadow(0 5px 9px rgba(20, 15, 30, 0.16)); transition: transform 0.15s ease; }
+.eb-deck-stack::before, .eb-deck-stack::after { content: ""; position: absolute; inset: 0; border-radius: 14px; background: #6c4cf1; z-index: -1; }
+.eb-deck-stack::before { transform: translate(3px, 3px); opacity: 0.5; }
+.eb-deck-stack::after { transform: translate(6px, 6px); opacity: 0.3; }
+.eb-deck.can:hover .eb-deck-stack { transform: translateY(-4px); }
+.eb-deck-count { position: absolute; bottom: -9px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; font-family: var(--font-mono); font-size: 12px; padding: 2px 9px; border-radius: 999px; }
+.eb-deck-hint { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); background: var(--brand); color: #fff; font-family: var(--font-display); font-weight: 600; font-size: 12px; padding: 3px 11px; border-radius: 999px; white-space: nowrap; }
+
+.eb-pile { position: relative; width: 116px; height: 162px; }
+.eb-discard-top { position: absolute; inset: 0; filter: drop-shadow(0 7px 13px rgba(20, 15, 30, 0.17)); border-radius: 12px; animation: eb-drop 0.42s cubic-bezier(0.2, 1.15, 0.4, 1) both; }
+@keyframes eb-drop {
+  0% { transform: translateY(-56px) rotate(calc(var(--rot, 0deg) - 14deg)) scale(1.09); opacity: 0; }
+  55% { opacity: 1; }
+  100% { transform: translateY(0) rotate(var(--rot, 0deg)) scale(1); opacity: 1; }
+}
+
+.eb-suit { display: flex; flex-direction: column; align-items: center; gap: 4px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; box-shadow: var(--shadow-card); }
+.eb-suit.changed { border-color: var(--brand); box-shadow: 0 0 0 3px var(--tint-purple); }
+.eb-suit-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-2); }
+
+/* your hand — a fan; playable cards lift, others dim */
+.eb-hand { display: flex; justify-content: center; align-items: flex-end; padding: 34px 12px 6px; min-height: 190px; }
+.eb-slot { transform: rotate(var(--rot)); transform-origin: bottom center; transition: transform 0.18s ease; }
+.eb-slot.playable { cursor: pointer; }
+.eb-slot.playable:hover { z-index: 40 !important; }
+.eb-lift { transition: transform 0.18s ease, filter 0.18s ease, opacity 0.3s ease; filter: drop-shadow(0 6px 10px rgba(20, 15, 30, 0.13)); border-radius: 12px; }
+.eb-slot.playable:hover .eb-lift { transform: translateY(-28px); }
+.eb-slot.dim .eb-lift { filter: grayscale(0.5) brightness(0.97); opacity: 0.78; }
+.eb-lift.playing { transform: translateY(-180px) scale(0.84) !important; opacity: 0; }
+.eb-hint { text-align: center; }
+
+/* wild-8 suit picker */
+.eb-picker-backdrop { position: fixed; inset: 0; background: rgba(20, 15, 30, 0.42); display: grid; place-items: center; z-index: 100; }
+.eb-picker { background: var(--card); border-radius: 20px; padding: 22px 24px; box-shadow: var(--shadow-pop); text-align: center; }
+.eb-picker-title { font-family: var(--font-display); font-weight: 700; font-size: 16px; margin-bottom: 16px; }
+.eb-picker-suits { display: flex; gap: 12px; }
+.eb-picker-suit { background: var(--card); border: 1.5px solid var(--line-2); border-radius: 14px; padding: 14px; cursor: pointer; display: grid; place-items: center; }
+.eb-picker-suit:hover { border-color: var(--brand); background: var(--tint-purple-2); }
+
+@media (prefers-reduced-motion: reduce) {
+  .eb-discard-top { animation: none; }
+  .eb-lift, .eb-slot, .eb-deck-stack { transition: none; }
+}
+
 /* generic auto board */
 .autoboard { margin-top: 16px; display: flex; flex-direction: column; gap: 18px; }
 .stateview { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }

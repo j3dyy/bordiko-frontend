@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMatch } from "./useMatch.ts";
 import { HexBoard } from "./HexBoard.tsx";
+import { EightsBoard } from "./EightsBoard.tsx";
 import { AutoBoard } from "./AutoBoard.tsx";
 import { RateBar } from "./RateBar.tsx";
 import { gameMeta } from "./games.ts";
@@ -54,6 +55,8 @@ export function Game({
           {state ? (
             meta.renderer === "hive" ? (
               <HexBoard state={state} playerId={playerId} onMove={sendMove} />
+            ) : meta.renderer === "eights" ? (
+              <EightsBoard state={state} playerId={playerId} onMove={sendMove} />
             ) : (
               <AutoBoard state={state} onMove={sendMove} />
             )
