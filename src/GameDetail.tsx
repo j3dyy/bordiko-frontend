@@ -95,6 +95,16 @@ export function GameDetail({
         </div>
       </section>
 
+      <section className="howto">
+        <h3 className="section-title">How to play</h3>
+        <p className="howto-goal"><b>Goal —</b> {m.objective}</p>
+        <ol className="howto-steps">
+          {m.howTo.map((step, i) => (
+            <li key={i}>{step}</li>
+          ))}
+        </ol>
+      </section>
+
       <div className="detail-cols">
         <div className="lb-table-wrap">
           <h3 className="section-title">Leaderboard</h3>
