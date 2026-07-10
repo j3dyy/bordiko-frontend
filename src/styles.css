@@ -807,8 +807,7 @@ code { font-family: var(--font-mono); }
 .jk-opp-head { display: flex; align-items: center; gap: 5px; }
 .jk-opp-name { font-weight: 600; font-size: 13px; }
 .jk-opp-bid { font-family: var(--font-mono); font-size: 10px; color: var(--muted); width: 100%; text-align: center; }
-.jk-opp-cards { min-height: 60px; display: flex; align-items: center; justify-content: center; }
-.jk-played { animation: jk-drop 0.25s ease; }
+.jk-opp-cards { min-height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
 
 .jk-minifan { position: relative; display: flex; }
 .jk-minicard { margin-left: -26px; transform: rotate(calc((var(--i) - 2) * 4deg)); }
@@ -817,19 +816,35 @@ code { font-family: var(--font-mono); }
   background: var(--ink); color: #fff; border-radius: 8px; padding: 0 5px; }
 
 .jk-desk {
-  min-height: 172px; border-radius: 20px; background: radial-gradient(circle at 50% 40%, #163a2e, #0f2a20);
+  min-height: 200px; border-radius: 20px; background: radial-gradient(circle at 50% 40%, #163a2e, #0f2a20);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 18px;
   position: relative; box-shadow: inset 0 2px 20px rgba(0,0,0,0.35);
 }
 .jk-desk-empty { color: rgba(255,255,255,0.55); font-family: var(--font-mono); font-size: 13px; }
-.jk-trick { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
-.jk-trick-card { display: flex; flex-direction: column; align-items: center; gap: 5px; animation: jk-drop 0.25s ease; }
-.jk-trick-who { font-family: var(--font-mono); font-size: 10.5px; color: rgba(255,255,255,0.8); }
+
+/* the trick as a "flower": cards share a pivot at the bottom and fan out, so
+   every card played so far stays visible and the newest lands on top. */
+.jk-trick { position: relative; width: 260px; height: 172px; }
+.jk-trick-card {
+  position: absolute; left: 50%; bottom: 2px;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  transform-origin: center bottom;
+  transform: translateX(-50%) rotate(calc((var(--i) - (var(--n) - 1) / 2) * 17deg));
+  transition: transform 0.32s cubic-bezier(0.2, 0.85, 0.25, 1);
+  animation: jk-fadein 0.28s ease;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+}
+.jk-trick-who {
+  font-family: var(--font-mono); font-size: 10px; color: rgba(255, 255, 255, 0.92);
+  background: rgba(0, 0, 0, 0.34); padding: 1px 7px; border-radius: 10px; white-space: nowrap;
+}
 .jk-called { position: absolute; top: 10px; right: 12px; display: flex; align-items: center; gap: 5px;
   color: rgba(255,255,255,0.85); font-family: var(--font-mono); font-size: 11px; background: rgba(0,0,0,0.25);
   padding: 3px 8px; border-radius: 20px; }
 .jk-called svg { filter: brightness(2.4); }
-@keyframes jk-drop { from { transform: translateY(-14px) scale(0.9); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes jk-fadein { from { opacity: 0; } to { opacity: 1; } }
+.jk-opp.played .jk-minifan { opacity: 0.4; }
+.jk-opp-played { font-family: var(--font-mono); font-size: 9px; color: var(--teal-700); font-weight: 600; }
 
 /* action panels */
 .jk-panel {

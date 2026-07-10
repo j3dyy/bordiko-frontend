@@ -184,41 +184,37 @@ export function JokeriBoard({
       <div className="jk-table">
         <div className="jk-opponents">
           {others.map((p) => {
-            const t = trickCardOf(p);
             const tc = teamColor(p);
+            const played = !!trickCardOf(p);
             return (
-              <div key={p} className={`jk-opp ${p === G.toAct ? "acting" : ""}`}>
+              <div key={p} className={`jk-opp ${p === G.toAct ? "acting" : ""} ${played ? "played" : ""}`}>
                 <div className="jk-opp-head">
                   {tc && <span className="jk-team-dot" style={{ background: tc }} />}
                   <span className="jk-opp-name">{shortName(p)}</span>
                   <span className="jk-opp-bid">{fmtBid(G.bids[p])} · took {G.taken[p] ?? 0}</span>
                 </div>
                 <div className="jk-opp-cards">
-                  {t ? (
-                    <div className="jk-played">
-                      <PlayCard c={t.card} mode={t.jokerMode} size={78} />
-                    </div>
-                  ) : (
-                    <MiniFan n={G.handCounts[p] ?? 0} />
-                  )}
+                  <MiniFan n={G.handCounts[p] ?? 0} />
+                  {played && <span className="jk-opp-played">played ✓</span>}
                 </div>
               </div>
             );
           })}
         </div>
 
-        {/* center: the current trick + who leads */}
+        {/* center: the trick fans onto the desk like a flower — every card so far
+            stays visible, newest on top. */}
         <div className="jk-desk">
           {G.trick.length === 0 ? (
             <div className="jk-desk-empty">
               {G.phase === "play" ? `${shortName(G.leader)} leads` : "—"}
             </div>
           ) : (
-            <div className="jk-trick">
-              {G.trick.map((t) => (
-                <div key={t.player} className="jk-trick-card">
+            <div className="jk-trick" style={{ ["--n" as string]: G.trick.length }}>
+              {G.trick.map((t, i) => (
+                <div key={t.player} className="jk-trick-card" style={{ ["--i" as string]: i, zIndex: i + 1 }}>
                   <span className="jk-trick-who">{t.player === me ? "You" : shortName(t.player)}</span>
-                  <PlayCard c={t.card} mode={t.jokerMode} size={92} />
+                  <PlayCard c={t.card} mode={t.jokerMode} size={96} />
                 </div>
               ))}
             </div>
