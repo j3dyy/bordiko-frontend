@@ -16,7 +16,7 @@ export function Login() {
   return (
     <div className="login">
       <div className="login-card">
-        <div className="login-mark">🎲</div>
+        <img className="login-mark" src="/bordiko-icon.svg" alt="Bordiko" />
         <h1>Bordiko</h1>
         <p className="login-sub">Sign in to play. Every game is ranked.</p>
 

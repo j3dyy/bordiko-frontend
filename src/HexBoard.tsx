@@ -3,7 +3,7 @@ import { hexToPixel, hexPolygon, hexKey, parseHexKey } from "./hexgeom.ts";
 import type { StateMsg } from "./wire.ts";
 
 const SIZE = 30;
-const PLAYER_COLORS = ["#d3a24a", "#5b6ea6"]; // player 0, player 1
+const PLAYER_COLORS = ["#6C4CF1", "#FF6A3D"]; // player 0 (brand purple), player 1 (brand orange)
 const KIND_NAMES: Record<string, string> = {
   Q: "Queen", B: "Beetle", G: "Grasshopper", S: "Spider", A: "Ant",
 };
@@ -116,8 +116,8 @@ export function HexBoard({
             <g key={k} onClick={() => clickCell(k)} style={{ cursor: isTarget || movable ? "pointer" : "default" }}>
               <polygon
                 points={hexPolygon(x, y, SIZE - 2)}
-                fill={top ? PLAYER_COLORS[top.player] : "#1b1e28"}
-                stroke={isTarget ? "#4ade80" : selectedFrom ? "#fde047" : movable ? "#8aa0d8" : "#3a3f4b"}
+                fill={top ? PLAYER_COLORS[top.player] : "#ffffff"}
+                stroke={isTarget ? "#17C0A4" : selectedFrom ? "#FFC53D" : movable ? "#B3A2F7" : "#E4E1E7"}
                 strokeWidth={isTarget || selectedFrom ? 3 : movable ? 2 : 1}
                 strokeDasharray={isTarget && !top ? "5,4" : undefined}
                 opacity={top ? 1 : isTarget ? 0.95 : 0.45}

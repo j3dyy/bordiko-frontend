@@ -35,7 +35,7 @@ export function App() {
     <div className="app">
       <header className="topbar">
         <button className="brand" onClick={goHome}>
-          <span className="brand-mark">🎲</span> Bordiko
+          <img className="brand-mark" src="/bordiko-icon.svg" alt="" /> Bordiko
         </button>
         {!inGame && (
           <nav className="nav">

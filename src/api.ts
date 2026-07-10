@@ -1,4 +1,4 @@
-import type { Lobby, LeaderRow, Providers, User } from "./wire.ts";
+import type { Lobby, LeaderRow, Providers, User, CatalogGame } from "./wire.ts";
 
 // Gateway base URL (auth + REST proxy + WebSocket all live here). Override at
 // build/dev time with VITE_GATEWAY_URL.
@@ -44,6 +44,25 @@ export async function logout(): Promise<void> {
 export async function listGames(): Promise<string[]> {
   const data = await json<{ games: string[] }>(await req("/api/games"), "listGames");
   return data.games ?? [];
+}
+
+// The rich Discover catalog: per-game metadata + real rating/plays/live counts.
+export async function fetchCatalog(): Promise<CatalogGame[]> {
+  const data = await json<{ games: CatalogGame[] }>(await req("/api/catalog"), "catalog");
+  return data.games ?? [];
+}
+
+// Submit the signed-in user's star rating (1–5) for a game; returns the new
+// aggregate. The gateway derives the user id from the session cookie.
+export async function rateGame(gameId: string, stars: number): Promise<{ rating: number; ratingCount: number }> {
+  return json<{ rating: number; ratingCount: number }>(
+    await req(`/api/games/${encodeURIComponent(gameId)}/rate`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ stars }),
+    }),
+    "rate",
+  );
 }
 
 /* --------------------------------- lobby ---------------------------------- */

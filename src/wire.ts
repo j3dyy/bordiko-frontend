@@ -73,6 +73,23 @@ export interface Lobby {
   createdAt: string;
 }
 
+/* -------------------------------- catalog --------------------------------- */
+
+// One marketplace game with real, server-computed stats (see the gateway's
+// /api/catalog). Presentation (name, blurb, emoji, category, creator) is merged
+// in on the client from games.ts.
+export interface CatalogGame {
+  id: string;
+  displayName: string;
+  minPlayers: number;
+  maxPlayers: number;
+  board: string;
+  rating: number;
+  ratingCount: number;
+  plays: number;
+  live: number;
+}
+
 /* ----------------------------- leaderboard -------------------------------- */
 
 export interface LeaderRow {

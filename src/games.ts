@@ -13,6 +13,9 @@ export interface GameMeta {
   renderer: "hive" | "auto";
   accent: string;
   emoji: string;
+  category: string;
+  author: string;
+  verified: boolean;
 }
 
 const KNOWN: Record<string, Omit<GameMeta, "id">> = {
@@ -22,8 +25,11 @@ const KNOWN: Record<string, Omit<GameMeta, "id">> = {
     minPlayers: 2,
     maxPlayers: 2,
     renderer: "hive",
-    accent: "#e0b23c",
+    accent: "#6C4CF1",
     emoji: "🐝",
+    category: "Hex & Area",
+    author: "@bordiko",
+    verified: true,
   },
   eights: {
     name: "Crazy Eights",
@@ -31,8 +37,11 @@ const KNOWN: Record<string, Omit<GameMeta, "id">> = {
     minPlayers: 2,
     maxPlayers: 5,
     renderer: "auto",
-    accent: "#4ea1ff",
+    accent: "#17C0A4",
     emoji: "🃏",
+    category: "Card Game",
+    author: "@bordiko",
+    verified: true,
   },
   "king-of-tokyo": {
     name: "King of Tokyo",
@@ -40,8 +49,11 @@ const KNOWN: Record<string, Omit<GameMeta, "id">> = {
     minPlayers: 2,
     maxPlayers: 4,
     renderer: "auto",
-    accent: "#ff6b6b",
+    accent: "#FF6A3D",
     emoji: "🎲",
+    category: "Dice",
+    author: "@bordiko",
+    verified: true,
   },
   "tic-tac-toe": {
     name: "Tic-Tac-Toe",
@@ -49,8 +61,11 @@ const KNOWN: Record<string, Omit<GameMeta, "id">> = {
     minPlayers: 2,
     maxPlayers: 2,
     renderer: "auto",
-    accent: "#9aa0ad",
+    accent: "#FFC53D",
     emoji: "⭕",
+    category: "Abstract",
+    author: "@bordiko",
+    verified: true,
   },
 };
 
@@ -65,9 +80,17 @@ export function gameMeta(id: string): GameMeta {
     minPlayers: 2,
     maxPlayers: 4,
     renderer: "auto",
-    accent: "#4ade80",
+    accent: "#7C60F5",
     emoji: "🎮",
+    category: "Community",
+    author: "@community",
+    verified: false,
   };
+}
+
+// Players label like "2" or "2–4".
+export function playersLabel(m: { minPlayers: number; maxPlayers: number }): string {
+  return m.minPlayers === m.maxPlayers ? `${m.minPlayers}` : `${m.minPlayers}–${m.maxPlayers}`;
 }
 
 function prettify(id: string): string {
