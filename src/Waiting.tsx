@@ -23,6 +23,8 @@ export function Waiting({
   const [current, setCurrent] = useState<Lobby | null>(null);
   const [acting, setActing] = useState(false);
   const [err, setErr] = useState("");
+  const [pwd, setPwd] = useState("");
+  const [copied, setCopied] = useState(false);
   const timer = useRef<number | null>(null);
   const onStartRef = useRef(onStart);
   const onCancelRef = useRef(onCancel);
@@ -94,9 +96,20 @@ export function Waiting({
   const filled = seatedCount(current);
   const total = current.seats.length;
 
-  const sit = (i: number) => run(() => sitSeat(current.id, i));
+  const sit = (i: number) => run(() => sitSeat(current.id, i, pwd));
   const stand = () => run(() => standSeat(current.id));
   const start = () => run(() => startLobby(current.id));
+
+  const inviteUrl = `${window.location.origin}/waiting/${current.id}`;
+  async function copyInvite() {
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setErr(`Copy failed — invite link: ${inviteUrl}`);
+    }
+  }
 
   async function leave() {
     setActing(true);
@@ -122,9 +135,19 @@ export function Waiting({
             <span className="game-emoji">{m.emoji}</span>
             <h2>{m.name}</h2>
           </div>
-          <span className={current.mode === "teams" ? "mode-badge teams" : "mode-badge"}>
-            {current.mode === "teams" ? "Teams · partners across" : "Free-for-all"}
-          </span>
+          <div className="table-badges">
+            <span className={current.mode === "teams" ? "mode-badge teams" : "mode-badge"}>
+              {current.mode === "teams" ? "Teams · partners across" : "Free-for-all"}
+            </span>
+            {current.visibility === "private" && (
+              <span className="mode-badge private">🔒 {current.hasPassword ? "Private · password" : "Private"}</span>
+            )}
+          </div>
+        </div>
+
+        <div className="table-share">
+          <input className="share-url" value={inviteUrl} readOnly onFocus={(e) => e.currentTarget.select()} aria-label="invite link" />
+          <button className="ghost small" onClick={copyInvite}>{copied ? "✓ Copied" : "🔗 Copy invite"}</button>
         </div>
 
         <div className="table-ring">
@@ -156,23 +179,38 @@ export function Waiting({
         </div>
 
         <div className="table-controls">
+          {current.hasPassword && !seated && (
+            <input
+              className="table-pwd"
+              type="text"
+              value={pwd}
+              onChange={(e) => setPwd(e.target.value)}
+              placeholder="Table password"
+              aria-label="table password"
+            />
+          )}
           {seated ? (
             <button className="ghost" disabled={acting} onClick={stand}>
               Stand up
             </button>
           ) : (
-            <span className="hint">Pick a seat to join{current.mode === "teams" ? " and choose your team" : ""}.</span>
+            <span className="hint">
+              {current.hasPassword
+                ? "Enter the password, then pick a seat."
+                : `Pick a seat to join${current.mode === "teams" ? " and choose your team" : ""}.`}
+            </span>
           )}
-          <div className="table-code">
-            table code <code>{current.id}</code>
-          </div>
           <button className="ghost" disabled={acting} onClick={leave}>
             {isHost ? "Cancel table" : "Leave"}
           </button>
         </div>
 
         {err && <p className="error">{err}</p>}
-        <p className="hint center">Share this page — anyone signed in can join from “Live now”.</p>
+        <p className="hint center">
+          {current.visibility === "private"
+            ? "Private table — share the invite link above to bring people in."
+            : "Public table — anyone signed in can also join from “Live now”."}
+        </p>
       </div>
     </div>
   );

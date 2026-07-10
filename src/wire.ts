@@ -86,6 +86,8 @@ export interface Lobby {
   gameId: string;
   host: string;
   mode: "solo" | "teams";
+  visibility: "public" | "private";
+  hasPassword: boolean;
   seats: Seat[];
   matchId?: string;
   status: "open" | "started";

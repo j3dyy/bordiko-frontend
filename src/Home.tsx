@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createLobby, fetchCatalog, fetchLeaderboard, joinLobby, listLobbies } from "./api.ts";
-import { gameMeta, needsTableSetup, playersLabel } from "./games.ts";
+import { gameMeta, playersLabel } from "./games.ts";
 import { TableSetup } from "./TableSetup.tsx";
 import { seatedCount } from "./wire.ts";
 import type { CatalogGame, LeaderRow, Lobby } from "./wire.ts";
@@ -53,22 +53,18 @@ export function Home({
     return false;
   }
 
-  // "New table": games with a single fixed player count and no team option go
-  // straight to a table; anything with a choice opens the setup chooser first.
+  // "New table" always opens the chooser now — every game lets you pick seats
+  // (where relevant) and whether the table is public or private.
   function newTable(gameId: string) {
     setErr("");
-    if (needsTableSetup(gameMeta(gameId))) {
-      setSetupFor(gameId);
-    } else {
-      void create(gameId, gameMeta(gameId).minPlayers, "solo");
-    }
+    setSetupFor(gameId);
   }
 
-  async function create(gameId: string, seats: number, mode: "solo" | "teams") {
+  async function create(gameId: string, seats: number, mode: "solo" | "teams", visibility: "public" | "private", password: string) {
     setBusy(gameId);
     setErr("");
     try {
-      const lobby = await createLobby(gameId, seats, mode);
+      const lobby = await createLobby(gameId, seats, mode, visibility, password);
       setSetupFor("");
       onWaiting(lobby);
     } catch (e) {
@@ -178,7 +174,7 @@ export function Home({
           gameId={setupFor}
           busy={busy === setupFor}
           err={err}
-          onSubmit={(seats, mode) => create(setupFor, seats, mode)}
+          onSubmit={(seats, mode, visibility, password) => create(setupFor, seats, mode, visibility, password)}
           onClose={() => setSetupFor("")}
         />
       )}

@@ -10,7 +10,7 @@ export interface GameMeta {
   blurb: string;
   minPlayers: number;
   maxPlayers: number;
-  renderer: "hive" | "eights" | "auto";
+  renderer: "hive" | "eights" | "jokeri" | "auto";
   accent: string;
   emoji: string;
   category: string;
@@ -88,7 +88,7 @@ const KNOWN: Record<string, Omit<GameMeta, "id">> = {
     blurb: "Bid your tricks and take exactly what you called. Two black-six Jokers rule the deck. Play solo or in partnerships.",
     minPlayers: 3,
     maxPlayers: 4,
-    renderer: "auto",
+    renderer: "jokeri",
     accent: "#D83A34",
     emoji: "🃏",
     category: "Card Game",

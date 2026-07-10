@@ -98,12 +98,18 @@ async function lobbyResult(res: Response, label: string): Promise<Lobby> {
   return json<Lobby>(res, label);
 }
 
-export async function createLobby(gameId: string, seats = 2, mode: "solo" | "teams" = "solo"): Promise<Lobby> {
+export async function createLobby(
+  gameId: string,
+  seats = 2,
+  mode: "solo" | "teams" = "solo",
+  visibility: "public" | "private" = "public",
+  password = "",
+): Promise<Lobby> {
   return lobbyResult(
     await req("/api/lobby", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ gameId, seats, mode }),
+      body: JSON.stringify({ gameId, seats, mode, visibility, password }),
     }),
     "createLobby",
   );
@@ -113,21 +119,25 @@ export async function getLobby(id: string): Promise<Lobby> {
   return json<Lobby>(await req(`/api/lobby/${encodeURIComponent(id)}`), "getLobby");
 }
 
-export async function joinLobby(id: string): Promise<Lobby> {
+export async function joinLobby(id: string, password = ""): Promise<Lobby> {
   return lobbyResult(
-    await req(`/api/lobby/${encodeURIComponent(id)}/join`, { method: "POST" }),
+    await req(`/api/lobby/${encodeURIComponent(id)}/join`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ password }),
+    }),
     "joinLobby",
   );
 }
 
 // Take a specific seat (choosing your partnership in teams mode); moves you if
 // you were already seated elsewhere.
-export async function sitSeat(id: string, seat: number): Promise<Lobby> {
+export async function sitSeat(id: string, seat: number, password = ""): Promise<Lobby> {
   return lobbyResult(
     await req(`/api/lobby/${encodeURIComponent(id)}/sit`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ seat }),
+      body: JSON.stringify({ seat, password }),
     }),
     "sitSeat",
   );

@@ -18,12 +18,14 @@ export function TableSetup({
   gameId: string;
   busy: boolean;
   err: string;
-  onSubmit: (seats: number, mode: "solo" | "teams") => void;
+  onSubmit: (seats: number, mode: "solo" | "teams", visibility: "public" | "private", password: string) => void;
   onClose: () => void;
 }) {
   const m = gameMeta(gameId);
   const [seats, setSeats] = useState(m.minPlayers);
   const [mode, setMode] = useState<"solo" | "teams">("solo");
+  const [visibility, setVisibility] = useState<"public" | "private">("public");
+  const [password, setPassword] = useState("");
 
   const counts: number[] = [];
   for (let n = m.minPlayers; n <= m.maxPlayers; n++) counts.push(n);
@@ -87,12 +89,43 @@ export function TableSetup({
 
         {mode === "teams" && teamsEligible && <TeamPreview seats={seats} />}
 
+        <div className="ts-field">
+          <span className="ts-label">Visibility</span>
+          <div className="ts-formats">
+            <button className={visibility === "public" ? "fmt active" : "fmt"} onClick={() => setVisibility("public")}>
+              <span className="fmt-title">Public</span>
+              <span className="fmt-sub">Listed in “Live now”</span>
+            </button>
+            <button className={visibility === "private" ? "fmt active" : "fmt"} onClick={() => setVisibility("private")}>
+              <span className="fmt-title">🔒 Private</span>
+              <span className="fmt-sub">Invite by link only</span>
+            </button>
+          </div>
+        </div>
+
+        {visibility === "private" && (
+          <div className="ts-field">
+            <span className="ts-label">Password <span className="ts-optional">optional</span></span>
+            <input
+              type="text"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Leave blank for link-only"
+              maxLength={64}
+              autoComplete="off"
+            />
+          </div>
+        )}
+
         {err && <p className="error">{err}</p>}
         <div className="ts-actions">
           <button className="ghost" onClick={onClose}>
             Cancel
           </button>
-          <button disabled={busy} onClick={() => onSubmit(seats, teamsEligible ? mode : "solo")}>
+          <button
+            disabled={busy}
+            onClick={() => onSubmit(seats, teamsEligible ? mode : "solo", visibility, visibility === "private" ? password.trim() : "")}
+          >
             {busy ? "Creating…" : "Create table"}
           </button>
         </div>
