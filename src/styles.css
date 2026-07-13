@@ -846,6 +846,14 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 .jk-trump-lbl { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted-2); }
 .jk-notrump { font-family: var(--font-mono); font-weight: 700; font-size: 13px; color: var(--muted); background: var(--panel); border-radius: 6px; padding: 1px 7px; }
 .jk-handsize { margin-left: auto; font-family: var(--font-mono); font-size: 10.5px; color: var(--muted-2); }
+.jk-sheet-bids {
+  display: flex; align-items: center; gap: 8px; margin: -4px 0 10px; padding: 5px 9px; border-radius: 9px;
+  background: var(--panel); font-family: var(--font-mono); font-size: 11px; color: var(--muted);
+}
+.jk-sheet-bids b { font-family: var(--font-display); font-size: 12px; }
+.jk-sheet-bids .jk-fill { color: var(--brand); }
+.jk-sheet-bids.over { background: rgba(255, 106, 61, 0.14); } .jk-sheet-bids.over b { color: #d1521f; }
+.jk-sheet-bids.under { background: var(--tint-teal); } .jk-sheet-bids.under b { color: var(--teal-700); }
 
 /* the traditional grid: a deal per row, "bid │ points" per player */
 .jk-grid-scroll { max-height: 56vh; overflow-y: auto; margin: 0 -4px; }
@@ -964,8 +972,8 @@ button.danger:hover:not(:disabled) { background: #b42318; }
   position: absolute; left: 14px; bottom: 12px; display: flex; flex-direction: column; gap: 4px;
   background: rgba(0, 0, 0, 0.3); border-radius: 12px; padding: 6px 8px;
 }
-.jk-lt-lbl { font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255, 255, 255, 0.75); }
-.jk-lt-cards { display: flex; gap: 2px; }
+.jk-lt-lbl { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255, 255, 255, 0.85); font-weight: 600; }
+.jk-lt-cards { display: flex; gap: 3px; }
 .jk-lt-card { line-height: 0; border-radius: 4px; opacity: 0.85; }
 .jk-lt-card.won { outline: 2px solid var(--teal); outline-offset: 1px; border-radius: 5px; opacity: 1; }
 
@@ -977,18 +985,36 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 .jk-koziri-lbl { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); font-weight: 600; }
 .jk-koziri-nt { font-family: var(--font-mono); font-weight: 700; font-size: 11px; color: var(--muted); }
 
+/* bids-vs-tricks chip: fill gap while bidding, then წაგლეჯვა / შეტენვა */
+.jk-bidsum {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 3; display: flex; align-items: center; gap: 5px;
+  background: rgba(255, 255, 255, 0.94); border-radius: 13px; padding: 5px 13px; box-shadow: 0 2px 9px rgba(0, 0, 0, 0.28);
+  font-family: var(--font-mono); font-size: 12px; color: var(--muted); white-space: nowrap;
+}
+.jk-bidsum b { font-family: var(--font-display); color: var(--text); font-size: 14px; }
+.jk-bidsum .jk-fill { color: var(--brand); font-weight: 700; }
+.jk-bidsum.over { background: var(--orange, #ff6a3d); color: rgba(255, 255, 255, 0.85); }
+.jk-bidsum.under { background: var(--teal); color: rgba(255, 255, 255, 0.9); }
+.jk-bidsum.over b, .jk-bidsum.under b { color: #fff; }
+
 /* a taken trick sweeps toward the winner's side */
-.jk-collect { position: absolute; left: 50%; top: 50%; z-index: 4; pointer-events: none; animation: 0.85s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+/* the completed trick sits in place (~1s so the last card is visible) then the
+   whole group sweeps to the winner's side and fades. */
+.jk-collect { position: absolute; inset: 0; z-index: 4; pointer-events: none; animation: 1.5s cubic-bezier(0.5, 0, 0.35, 1) forwards; }
 .jk-collect.to-north { animation-name: coll-n; }
 .jk-collect.to-south { animation-name: coll-s; }
 .jk-collect.to-west { animation-name: coll-w; }
 .jk-collect.to-east { animation-name: coll-e; }
-.jk-collect-card { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%) rotate(calc((var(--i) - 1.5) * 9deg)); filter: drop-shadow(0 5px 9px rgba(0, 0, 0, 0.45)); }
-@keyframes coll-n { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 22% { transform: translate(0, 0) scale(1.06); opacity: 1; } 100% { transform: translate(0, -180px) scale(0.45); opacity: 0; } }
-@keyframes coll-s { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 22% { transform: translate(0, 0) scale(1.06); opacity: 1; } 100% { transform: translate(0, 180px) scale(0.45); opacity: 0; } }
-@keyframes coll-w { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 22% { transform: translate(0, 0) scale(1.06); opacity: 1; } 100% { transform: translate(-340px, 0) scale(0.45); opacity: 0; } }
-@keyframes coll-e { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 22% { transform: translate(0, 0) scale(1.06); opacity: 1; } 100% { transform: translate(340px, 0) scale(0.45); opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .jk-collect { animation-duration: 0.4s; } }
+.jk-collect-card { position: absolute; filter: drop-shadow(0 5px 9px rgba(0, 0, 0, 0.45)); }
+.jk-collect-card.at-north { top: 12px; left: 50%; transform: translateX(-50%); }
+.jk-collect-card.at-south { bottom: 12px; left: 50%; transform: translateX(-50%); }
+.jk-collect-card.at-west { left: 16px; top: 50%; transform: translateY(-50%) rotate(-6deg); }
+.jk-collect-card.at-east { right: 16px; top: 50%; transform: translateY(-50%) rotate(6deg); }
+@keyframes coll-n { 0%, 62% { transform: translate(0, 0); opacity: 1; } 100% { transform: translate(0, -210px) scale(0.5); opacity: 0; } }
+@keyframes coll-s { 0%, 62% { transform: translate(0, 0); opacity: 1; } 100% { transform: translate(0, 210px) scale(0.5); opacity: 0; } }
+@keyframes coll-w { 0%, 62% { transform: translate(0, 0); opacity: 1; } 100% { transform: translate(-380px, 0) scale(0.5); opacity: 0; } }
+@keyframes coll-e { 0%, 62% { transform: translate(0, 0); opacity: 1; } 100% { transform: translate(380px, 0) scale(0.5); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .jk-collect { animation-duration: 0.6s; } }
 
 /* seat "bid / took" scoreboard */
 .jk-tally { display: flex; gap: 5px; margin-top: 2px; }

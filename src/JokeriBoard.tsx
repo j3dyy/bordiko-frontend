@@ -149,6 +149,12 @@ export function JokeriBoard({
   // Prefer the player's display name (from the gateway) over the raw id.
   const nameOf = (id: string) => state.names?.[id] ?? shortName(id);
 
+  // Bids vs. tricks: total called so far, and the gap to the hand size. Once all
+  // have bid, gap<0 = წაგლეჯვა (over-called), gap>0 = შეტენვა (under-called).
+  const bidTotal = G.players.reduce((s, p) => s + (G.bids[p] ?? 0), 0);
+  const allBid = G.players.every((p) => G.bids[p] != null);
+  const bidGap = G.handSize - bidTotal;
+
   // When a trick is taken, sweep its cards toward the winner's side of the table.
   useEffect(() => {
     const w = G.lastTrickWinner ?? null;
@@ -156,7 +162,7 @@ export function JokeriBoard({
       const k = ++collectRef.current.k;
       collectRef.current.winner = w;
       setCollect({ cards: G.lastTrick, dir: compassOf(w), k });
-      const t = setTimeout(() => setCollect((c) => (c && c.k === k ? null : c)), 900);
+      const t = setTimeout(() => setCollect((c) => (c && c.k === k ? null : c)), 1500);
       return () => clearTimeout(t);
     }
     if (!w) collectRef.current.winner = null;
@@ -232,6 +238,26 @@ export function JokeriBoard({
               </div>
             )}
 
+            {/* bids vs. tricks: fill gap during bidding, then წაგლეჯვა / შეტენვა */}
+            {(G.phase === "bid" || G.phase === "play") && G.handSize > 0 && (
+              <div className={`jk-bidsum ${allBid ? (bidGap < 0 ? "over" : bidGap > 0 ? "under" : "") : ""}`}>
+                {allBid ? (
+                  bidGap < 0 ? (
+                    <><b>წაგლეჯვა</b> +{Math.abs(bidGap)}</>
+                  ) : bidGap > 0 ? (
+                    <><b>შეტენვა</b> −{bidGap}</>
+                  ) : (
+                    <b>full</b>
+                  )
+                ) : (
+                  <>
+                    said <b>{bidTotal}</b>/{G.handSize}
+                    {bidGap > 0 && <span className="jk-fill"> · fill {bidGap}</span>}
+                  </>
+                )}
+              </div>
+            )}
+
             {(["north", "east", "south", "west"] as const).map((dir) => {
               const t = G.trick.find((tc) => compassOf(tc.player) === dir);
               return (
@@ -241,12 +267,13 @@ export function JokeriBoard({
               );
             })}
 
-            {/* a taken trick sweeps toward the winner's side */}
+            {/* the completed trick holds in place (so you see the last card), then
+                sweeps toward the winner's side */}
             {collect && (
               <div key={collect.k} className={`jk-collect to-${collect.dir}`}>
                 {collect.cards.map((t, i) => (
-                  <div key={i} className="jk-collect-card" style={{ ["--i" as string]: i, zIndex: i }}>
-                    <PlayCard c={t.card} mode={t.jokerMode} size={64} />
+                  <div key={i} className={`jk-collect-card at-${compassOf(t.player)}`} style={{ zIndex: i }}>
+                    <PlayCard c={t.card} mode={t.jokerMode} size={80} />
                   </div>
                 ))}
               </div>
@@ -290,7 +317,7 @@ export function JokeriBoard({
                       className={`jk-lt-card ${t.player === G.lastTrickWinner ? "won" : ""}`}
                       title={t.player === me ? "You" : nameOf(t.player)}
                     >
-                      {isJoker(t.card) ? <Card joker size={32} /> : <Card r={t.card.r} s={t.card.s} size={32} />}
+                      {isJoker(t.card) ? <Card joker size={46} /> : <Card r={t.card.r} s={t.card.s} size={46} />}
                     </div>
                   ))}
                 </div>
@@ -616,6 +643,21 @@ function ScoreGrid({
         {G.trump ? <SuitGlyph s={G.trump} size={22} /> : <span className="jk-notrump">NT</span>}
         {G.handSize > 0 && <span className="jk-handsize">{G.handSize}-card deal</span>}
       </div>
+      {G.handSize > 0 && G.phase !== "trump" && (() => {
+        const bt = G.players.reduce((s, p) => s + (G.bids[p] ?? 0), 0);
+        const ab = G.players.every((p) => G.bids[p] != null);
+        const gap = G.handSize - bt;
+        return (
+          <div className={`jk-sheet-bids ${ab ? (gap < 0 ? "over" : gap > 0 ? "under" : "") : ""}`}>
+            <span>bids {bt}/{G.handSize}</span>
+            {ab ? (
+              gap < 0 ? <b>წაგლეჯვა +{Math.abs(gap)}</b> : gap > 0 ? <b>შეტენვა −{gap}</b> : <b>full</b>
+            ) : (
+              gap > 0 && <b className="jk-fill">fill {gap}</b>
+            )}
+          </div>
+        );
+      })()}
 
       <div className="jk-grid-scroll" ref={scrollRef}>
         <table className="jk-grid">
