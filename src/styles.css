@@ -470,7 +470,35 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 
 /* in-game layout: board fills, chat sits alongside */
 .game-stage { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; margin-top: 4px; }
-.game-main { min-width: 0; }
+.game-main { min-width: 0; position: relative; }
+
+/* quick reactions (emotes) */
+.emote-bar { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 10px 4px; border-top: 1px solid var(--line); }
+.emote-btn { background: var(--panel); border: 1px solid var(--line-2); border-radius: 9px; padding: 3px 7px; font-size: 17px; line-height: 1.1; cursor: pointer; }
+.emote-btn:hover:not(:disabled) { background: var(--tint-purple-2); border-color: var(--brand); transform: translateY(-1px); }
+.emote-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.emote-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 40; }
+.emote-pop {
+  position: absolute; left: 32%; bottom: 80px; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  animation: emote-float 4.3s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+.emote-pop.mine { left: auto; right: 32%; }
+.emote-face { font-size: 46px; line-height: 1; filter: drop-shadow(0 4px 7px rgba(0, 0, 0, 0.28)); }
+.emote-who {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: #fff;
+  background: rgba(22, 20, 31, 0.72); border-radius: 10px; padding: 1px 8px; white-space: nowrap;
+}
+@keyframes emote-float {
+  0% { opacity: 0; transform: translateY(22px) scale(0.6); }
+  12% { opacity: 1; transform: translateY(0) scale(1.12); }
+  22% { transform: translateY(-4px) scale(1); }
+  78% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-150px) scale(0.9); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .emote-pop { animation-duration: 3s; animation-timing-function: ease; }
+}
 
 /* in-game chat */
 .chat {

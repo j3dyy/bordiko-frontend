@@ -63,3 +63,14 @@ export function soundTrickWon(): void {
   tone(659.25, 0.12, "triangle", 0.16);
   tone(987.77, 0.2, "triangle", 0.14, 0.1);
 }
+
+// "ring ring" — the bell nudge (🔔 emote), two quick bright dings.
+export function soundRing(): void {
+  tone(1318.51, 0.13, "triangle", 0.18);
+  tone(1318.51, 0.15, "triangle", 0.18, 0.17);
+}
+
+// A soft blip for any other reaction.
+export function soundEmote(): void {
+  tone(784.0, 0.09, "sine", 0.11);
+}

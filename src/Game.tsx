@@ -1,7 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { useMatch } from "./useMatch.ts";
 import { leaveMatch } from "./api.ts";
-import { isMuted, setMuted } from "./sound.ts";
+import { isMuted, setMuted, soundEmote, soundRing } from "./sound.ts";
+import type { LiveEmote } from "./useMatch.ts";
+
+// Quick reactions players can fire without typing (relayed to the whole table).
+const EMOTES = [
+  { key: "ring", emoji: "🔔", label: "Hurry!" },
+  { key: "love", emoji: "😘", label: "Sweety" },
+  { key: "like", emoji: "👍", label: "Like" },
+  { key: "dislike", emoji: "👎", label: "Dislike" },
+  { key: "clap", emoji: "👏", label: "Nice" },
+  { key: "haha", emoji: "😂", label: "Haha" },
+  { key: "wow", emoji: "😮", label: "Wow" },
+  { key: "think", emoji: "🤔", label: "Hmm" },
+] as const;
+const EMOJI: Record<string, string> = Object.fromEntries(EMOTES.map((e) => [e.key, e.emoji]));
 import { HexBoard } from "./HexBoard.tsx";
 import { EightsBoard } from "./EightsBoard.tsx";
 import { JokeriBoard } from "./JokeriBoard.tsx";
@@ -41,7 +55,17 @@ export function Game({
   onLeave: () => void;
   onLeaderboard?: () => void;
 }) {
-  const { state, connected, errors, chat, sendMove, sendChat } = useMatch(matchId, playerId);
+  const { state, connected, errors, chat, emotes, sendMove, sendChat, sendEmote } = useMatch(matchId, playerId);
+
+  // Sound each incoming reaction once (ring for the bell, a soft blip otherwise).
+  const lastEmoteId = useRef(0);
+  useEffect(() => {
+    const latest = emotes[emotes.length - 1];
+    if (!latest || latest.id === lastEmoteId.current) return;
+    lastEmoteId.current = latest.id;
+    if (latest.emote === "ring") soundRing();
+    else soundEmote();
+  }, [emotes]);
   const meta = gameMeta(gameId);
   const [dismissed, setDismissed] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
@@ -124,9 +148,11 @@ export function Game({
               ))}
             </ul>
           )}
+
+          <EmoteLayer emotes={emotes} myId={playerId} />
         </div>
 
-        <Chat chat={chat} myId={playerId} connected={connected} onSend={sendChat} />
+        <Chat chat={chat} myId={playerId} connected={connected} onSend={sendChat} onEmote={sendEmote} />
       </div>
 
       {state?.ended && !dismissed && (
@@ -252,11 +278,13 @@ function Chat({
   myId,
   connected,
   onSend,
+  onEmote,
 }: {
   chat: ChatMsg[];
   myId: string;
   connected: boolean;
   onSend: (text: string) => void;
+  onEmote: (emote: string) => void;
 }) {
   const [text, setText] = useState("");
   const logRef = useRef<HTMLDivElement>(null);
@@ -289,6 +317,20 @@ function Chat({
           ))
         )}
       </div>
+      <div className="emote-bar">
+        {EMOTES.map((e) => (
+          <button
+            key={e.key}
+            className="emote-btn"
+            onClick={() => onEmote(e.key)}
+            disabled={!connected}
+            title={e.label}
+            aria-label={e.label}
+          >
+            {e.emoji}
+          </button>
+        ))}
+      </div>
       <form className="chat-form" onSubmit={submit}>
         <input
           value={text}
@@ -301,5 +343,21 @@ function Chat({
         <button type="submit" disabled={!connected || !text.trim()}>Send</button>
       </form>
     </aside>
+  );
+}
+
+// Floating reactions that pop over the board and drift up as they fade. Own
+// reactions lean right, others left, so a table exchange reads at a glance.
+function EmoteLayer({ emotes, myId }: { emotes: LiveEmote[]; myId: string }) {
+  if (emotes.length === 0) return null;
+  return (
+    <div className="emote-layer" aria-hidden>
+      {emotes.map((e, i) => (
+        <div key={e.id} className={`emote-pop ${e.from === myId ? "mine" : ""}`} style={{ ["--i" as string]: i }}>
+          <span className="emote-face">{EMOJI[e.emote] ?? "❓"}</span>
+          <span className="emote-who">{e.from === myId ? "You" : e.name || "Player"}</span>
+        </div>
+      ))}
+    </div>
   );
 }

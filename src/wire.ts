@@ -57,6 +57,16 @@ export interface ChatMsg {
   ts: number;
 }
 
+// A quick reaction (emoji "poke") relayed to everyone in the match.
+export interface EmoteMsg {
+  t: "emote";
+  matchId: string;
+  from: string;
+  name: string;
+  emote: string; // key from the allowed set (see games/emotes)
+  ts: number;
+}
+
 /* ------------------------------- accounts --------------------------------- */
 
 export interface User {
