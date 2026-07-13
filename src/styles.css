@@ -66,9 +66,9 @@ a { color: var(--brand); text-decoration: none; }
 a:hover { color: var(--brand-600); }
 h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.01em; }
 
-.app { max-width: 1440px; margin: 0 auto; padding: 22px clamp(16px, 3vw, 40px) 80px; }
+.app { max-width: min(1680px, 95vw); margin: 0 auto; padding: 22px clamp(16px, 3vw, 44px) 80px; }
 /* the board play screen gets more room */
-.app.in-game { max-width: min(1840px, 96vw); }
+.app.in-game { max-width: min(2040px, 98vw); }
 .app.center { display: flex; align-items: center; justify-content: center; min-height: 80vh; }
 
 /* --------------------------------- buttons -------------------------------- */
@@ -826,7 +826,7 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 
 /* ================================ Jokeri ================================== */
 
-.jokeri { display: grid; grid-template-columns: 306px 1fr; gap: 18px; align-items: start; }
+.jokeri { display: grid; grid-template-columns: clamp(320px, 24vw, 400px) 1fr; gap: 18px; align-items: start; }
 
 /* left "scoresheet" paper */
 .jk-paper {
@@ -860,7 +860,10 @@ button.danger:hover:not(:disabled) { background: #b42318; }
   font-size: 11.5px; font-weight: 700; text-align: center; line-height: 1.25;
 }
 .jk-g-name.you { color: var(--brand); }
-.jk-g-nick { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+.jk-g-nick {
+  display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; overflow-wrap: anywhere; line-height: 1.15; vertical-align: middle; max-width: 100%;
+}
 .jk-g-name .jk-team-dot { display: inline-block; margin-right: 3px; vertical-align: middle; }
 
 .jk-g-row td { border-bottom: 1px solid rgba(228,225,231,0.55); }
@@ -929,7 +932,7 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 .jk-seat.me .jk-seat-plate { background: var(--tint-purple-2); }
 .jk-seat.acting .jk-minifan { filter: drop-shadow(0 0 7px var(--brand)); }
 .jk-seat-head { display: flex; align-items: center; gap: 5px; }
-.jk-seat-name { font-weight: 700; font-size: 13px; }
+.jk-seat-name { font-weight: 700; font-size: 13px; max-width: 118px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .jk-seat-sub { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
 
 .jk-felt {
@@ -990,7 +993,19 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 .jk-bid-btn.pass { background: var(--tint-yellow); color: #5a3d00; border-color: transparent; }
 
 /* your hand */
+.jk-hand-area { position: relative; }
 .jk-hand { display: flex; justify-content: center; align-items: flex-end; min-height: 140px; padding-top: 12px; }
+/* what you bid ("said") — sits to the left of your hand fan */
+.jk-mybid {
+  position: absolute; left: 8px; bottom: 16px; z-index: 5;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  background: var(--card); border: 1.5px solid var(--line-2); border-radius: 14px; padding: 8px 12px; box-shadow: var(--shadow-card);
+}
+.jk-mybid-lbl { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted-2); }
+.jk-mybid-val { font-family: var(--font-display); font-weight: 800; font-size: 30px; line-height: 1; color: var(--brand); }
+.jk-mybid-val.pass { color: var(--muted); }
+.jk-mybid-took { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+@media (max-width: 900px) { .jk-mybid { position: static; margin: 0 auto 8px; flex-direction: row; gap: 8px; align-items: baseline; } }
 .jk-slot { transform: rotate(var(--rot)); transform-origin: bottom center; transition: transform 0.14s ease; cursor: default; }
 .jk-slot.playable { cursor: pointer; }
 .jk-slot.playable:hover { transform: rotate(var(--rot)) translateY(-16px); z-index: 50 !important; }

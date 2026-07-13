@@ -275,8 +275,16 @@ export function JokeriBoard({
           </div>
         )}
 
-        {/* your hand */}
-        <div className="jk-hand">
+        {/* your hand, with a badge showing what you bid ("said") + tricks so far */}
+        <div className="jk-hand-area">
+          {G.bids[me] != null && (
+            <div className="jk-mybid" title="how many tricks you called (– = pass)">
+              <span className="jk-mybid-lbl">you said</span>
+              <span className={`jk-mybid-val ${G.bids[me] === 0 ? "pass" : ""}`}>{G.bids[me] === 0 ? "–" : G.bids[me]}</span>
+              {G.phase === "play" && <span className="jk-mybid-took">took {G.taken[me] ?? 0}</span>}
+            </div>
+          )}
+          <div className="jk-hand">
           {G.hand.length === 0 ? (
             <span className="hint">No cards this deal.</span>
           ) : (
@@ -299,6 +307,7 @@ export function JokeriBoard({
               );
             })
           )}
+          </div>
         </div>
 
         <p className="hint jk-hint">{hint}</p>
