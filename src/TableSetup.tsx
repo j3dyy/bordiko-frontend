@@ -18,7 +18,7 @@ export function TableSetup({
   gameId: string;
   busy: boolean;
   err: string;
-  onSubmit: (seats: number, mode: "solo" | "teams", visibility: "public" | "private", password: string) => void;
+  onSubmit: (seats: number, mode: "solo" | "teams", visibility: "public" | "private", password: string, khisht: string) => void;
   onClose: () => void;
 }) {
   const m = gameMeta(gameId);
@@ -26,6 +26,10 @@ export function TableSetup({
   const [mode, setMode] = useState<"solo" | "teams">("solo");
   const [visibility, setVisibility] = useState<"public" | "private">("public");
   const [password, setPassword] = useState("");
+  // Jokeri only: the khisht penalty (failed positive bid). "spec" = −100 × the
+  // deal size (the classic paper rule); otherwise a flat number.
+  const [khisht, setKhisht] = useState("spec");
+  const isJokeri = gameId === "jokeri";
 
   const counts: number[] = [];
   for (let n = m.minPlayers; n <= m.maxPlayers; n++) counts.push(n);
@@ -89,6 +93,30 @@ export function TableSetup({
 
         {mode === "teams" && teamsEligible && <TeamPreview seats={seats} />}
 
+        {isJokeri && (
+          <div className="ts-field">
+            <span className="ts-label">Khisht <span className="ts-optional">failed bid</span></span>
+            <div className="seg">
+              {(
+                [
+                  { v: "spec", label: "−100 × deal", sub: "classic" },
+                  { v: "-200", label: "−200", sub: "flat" },
+                  { v: "-500", label: "−500", sub: "harsh" },
+                ] as const
+              ).map((o) => (
+                <button
+                  key={o.v}
+                  className={o.v === khisht ? "seg-btn active" : "seg-btn"}
+                  onClick={() => setKhisht(o.v)}
+                  title={o.sub}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="ts-field">
           <span className="ts-label">Visibility</span>
           <div className="ts-formats">
@@ -124,7 +152,7 @@ export function TableSetup({
           </button>
           <button
             disabled={busy}
-            onClick={() => onSubmit(seats, teamsEligible ? mode : "solo", visibility, visibility === "private" ? password.trim() : "")}
+            onClick={() => onSubmit(seats, teamsEligible ? mode : "solo", visibility, visibility === "private" ? password.trim() : "", isJokeri ? khisht : "")}
           >
             {busy ? "Creating…" : "Create table"}
           </button>

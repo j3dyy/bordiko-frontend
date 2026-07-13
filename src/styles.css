@@ -751,7 +751,7 @@ code { font-family: var(--font-mono); }
 
 /* ================================ Jokeri ================================== */
 
-.jokeri { display: grid; grid-template-columns: 236px 1fr; gap: 18px; align-items: start; }
+.jokeri { display: grid; grid-template-columns: 306px 1fr; gap: 18px; align-items: start; }
 
 /* left "scoresheet" paper */
 .jk-paper {
@@ -772,26 +772,58 @@ code { font-family: var(--font-mono); }
 .jk-notrump { font-family: var(--font-mono); font-weight: 700; font-size: 13px; color: var(--muted); background: var(--panel); border-radius: 6px; padding: 1px 7px; }
 .jk-handsize { margin-left: auto; font-family: var(--font-mono); font-size: 10.5px; color: var(--muted-2); }
 
-.jk-sheet { width: 100%; border-collapse: collapse; }
-.jk-sheet th {
-  font-family: var(--font-mono); font-size: 9px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em;
-  color: var(--muted-2); text-align: right; padding: 2px 4px; border-bottom: 1px solid var(--line);
+/* the traditional grid: a deal per row, "bid │ points" per player */
+.jk-grid-scroll { max-height: 46vh; overflow-y: auto; margin: 0 -4px; }
+.jk-grid { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.jk-grid thead th { position: sticky; top: 0; z-index: 2; background: #fffdf7; }
+.jk-g-deal {
+  width: 24px; text-align: center; font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  color: var(--muted); padding: 3px 2px; border-right: 1px solid rgba(216,58,52,0.28);
 }
-.jk-sheet th:first-child { text-align: left; }
-.jk-sheet td { padding: 6px 4px; font-size: 13px; border-bottom: 1px solid rgba(228,225,231,0.6); }
-.jk-num { text-align: right; font-family: var(--font-mono); }
-.jk-score { font-weight: 700; }
-.jk-pname { display: flex; align-items: center; gap: 5px; font-weight: 600; }
-.jk-sheet tr.you .jk-pname { color: var(--brand); }
-.jk-sheet tr.acting { background: rgba(255,197,61,0.16); }
+.jk-g-name {
+  padding: 4px 3px 5px; border-bottom: 1px solid var(--line); vertical-align: bottom;
+  font-size: 11.5px; font-weight: 700; text-align: center; line-height: 1.25;
+}
+.jk-g-name.you { color: var(--brand); }
+.jk-g-nick { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+.jk-g-name .jk-team-dot { display: inline-block; margin-right: 3px; vertical-align: middle; }
+
+.jk-g-row td { border-bottom: 1px solid rgba(228,225,231,0.55); }
+.jk-g-cell { padding: 3px 6px 3px 5px; font-family: var(--font-mono); font-size: 12.5px; }
+.jk-cellbox { display: flex; align-items: baseline; justify-content: space-between; gap: 4px; }
+.jk-bidnum { color: var(--muted); font-size: 11px; min-width: 8px; }
+.jk-pts { font-weight: 700; margin-left: auto; }
+.jk-pts.live { color: var(--muted-2); font-weight: 500; }
+.jk-g-row.live { background: rgba(255,197,61,0.14); }
+.jk-g-row.live .jk-g-cell.acting .jk-cellbox { background: rgba(255,197,61,0.5); border-radius: 4px; padding: 0 3px; }
+
+/* khisht: a struck box, never a number */
+.jk-khisht {
+  margin-left: auto; display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 13px; padding: 0 2px; letter-spacing: 1px; color: var(--red, #d83a34);
+  border-left: 1.5px solid currentColor; border-right: 1.5px solid currentColor;
+  font-size: 10px; line-height: 1; opacity: 0.85;
+}
+
+/* subtotal band — the running total ÷100, once per round */
+.jk-g-band td { background: rgba(108,76,241,0.09); border-top: 1.5px solid rgba(108,76,241,0.35); border-bottom: 1.5px solid rgba(108,76,241,0.35); }
+.jk-g-total { text-align: center; font-family: var(--font-mono); font-weight: 700; font-size: 13px; padding: 4px 3px; color: var(--brand-deep, #4429A3); }
+.jk-g-band .jk-g-deal { background: rgba(108,76,241,0.09); border-right-color: rgba(108,76,241,0.35); }
+
 .jk-team-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
 .jk-badge {
   font-family: var(--font-mono); font-size: 8.5px; font-weight: 700; color: #5a3d00; background: var(--tint-yellow);
-  border-radius: 4px; padding: 0 3px; line-height: 1.5;
+  border-radius: 4px; padding: 0 3px; line-height: 1.5; margin-left: 3px;
 }
-.jk-turn-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brand); margin-left: 2px; animation: jk-pulse 1.1s ease-in-out infinite; }
+.jk-turn-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--brand); margin-left: 3px; animation: jk-pulse 1.1s ease-in-out infinite; }
 @keyframes jk-pulse { 0%,100% { opacity: 0.35; } 50% { opacity: 1; } }
-.jk-teamtotals { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line-2); display: flex; flex-direction: column; gap: 6px; }
+
+/* always-visible standings + team sums */
+.jk-standings { margin-top: 10px; padding-top: 9px; border-top: 1px dashed var(--line-2); }
+.jk-stand-row { display: grid; grid-template-columns: 24px repeat(var(--cols, 4), 1fr); align-items: center; }
+.jk-stand-lbl { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted-2); }
+.jk-stand-tot { text-align: center; font-family: var(--font-mono); font-weight: 700; font-size: 13px; }
+.jk-teamtotals { margin-top: 8px; display: flex; flex-direction: column; gap: 5px; }
 .jk-teamtotal { display: flex; align-items: center; gap: 7px; font-size: 13px; }
 .jk-team-name { font-weight: 600; }
 .jk-team-sum { margin-left: auto; font-family: var(--font-mono); font-weight: 700; }

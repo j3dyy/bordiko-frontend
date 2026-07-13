@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Card, SuitGlyph } from "./CardArt.tsx";
 import { TEAM_COLORS } from "./TableSetup.tsx";
 import type { StateMsg } from "./wire.ts";
@@ -11,6 +11,14 @@ interface TrickCard {
   player: string;
   card: JCard;
   jokerMode?: "high" | "low";
+}
+interface JHandResult {
+  handIndex: number;
+  handSize: number;
+  trump: string | null;
+  bids: Record<string, number>;
+  taken: Record<string, number>;
+  delta: Record<string, number>;
 }
 interface JokeriView {
   players: string[];
@@ -31,6 +39,7 @@ interface JokeriView {
   bids: Record<string, number | null>;
   taken: Record<string, number>;
   scores: Record<string, number>;
+  handResults: JHandResult[];
   handCounts: Record<string, number>;
   hand: JCard[];
 }
@@ -54,7 +63,8 @@ function roundOf(handIndex: number): { round: number; label: string } {
 
 // A card-table renderer for Jokeri: opponents around the desk with their bid /
 // tricks, the live trick in the middle, your hand fanned below, and a left-hand
-// "scoresheet" paper tracking every player's request (bid) and takes.
+// "scoresheet" paper — the traditional grid where each deal is a row and every
+// cell is written "bid │ points" (see ScoreGrid).
 export function JokeriBoard({
   state,
   playerId,
@@ -135,50 +145,8 @@ export function JokeriBoard({
 
   return (
     <div className="jokeri">
-      {/* ---------------- left scoresheet "paper" ---------------- */}
-      <aside className="jk-paper">
-        <div className="jk-paper-head">
-          <span className="jk-paper-title">Scoresheet</span>
-          <span className="jk-round">{roundLabel}</span>
-        </div>
-        <div className="jk-trump">
-          <span className="jk-trump-lbl">trump</span>
-          {G.trump ? <SuitGlyph s={G.trump} size={22} /> : <span className="jk-notrump">NT</span>}
-          {G.handSize > 0 && <span className="jk-handsize">{G.handSize}-card deal</span>}
-        </div>
-        <table className="jk-sheet">
-          <thead>
-            <tr>
-              <th>player</th>
-              <th title="tricks requested">ask</th>
-              <th title="tricks taken">take</th>
-              <th>score</th>
-            </tr>
-          </thead>
-          <tbody>
-            {G.players.map((p) => {
-              const bid = G.bids[p];
-              const isYou = p === me;
-              const acting = p === G.toAct && !state.ended;
-              const tc = teamColor(p);
-              return (
-                <tr key={p} className={`${isYou ? "you" : ""} ${acting ? "acting" : ""}`}>
-                  <td className="jk-pname">
-                    {tc && <span className="jk-team-dot" style={{ background: tc }} />}
-                    {isYou ? "You" : shortName(p)}
-                    {p === G.dealer && <span className="jk-badge" title="dealer">D</span>}
-                    {acting && <span className="jk-turn-dot" />}
-                  </td>
-                  <td className="jk-num">{bid == null ? "—" : bid}</td>
-                  <td className="jk-num">{G.taken[p] ?? 0}</td>
-                  <td className="jk-num jk-score">{G.scores[p] ?? 0}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        {G.mode === "teams" && <TeamTotals G={G} />}
-      </aside>
+      {/* ---------------- left scoresheet "paper" (traditional grid) ---------------- */}
+      <ScoreGrid G={G} me={me} ended={!!state.ended} roundLabel={roundLabel} teamColor={teamColor} />
 
       {/* ---------------- the desk ---------------- */}
       <div className="jk-table">
@@ -352,21 +320,189 @@ function MiniFan({ n }: { n: number }) {
   );
 }
 
-function TeamTotals({ G }: { G: JokeriView }) {
+/* ------------------------- the traditional scoresheet ------------------------
+ * Written the way the paper is: every deal is a row, the leading column is the
+ * deal size, and each player's cell reads "bid │ points" — a dash for a 0 bid
+ * (pass), and a struck box for a khisht (bid ≥1 but took none). After each of
+ * the four rounds a band shows the running total ÷100 with a comma, exactly like
+ * the folk sheet ("1,9" = 190, "−1,5" = −150). The last row is the current deal,
+ * live: bids as they come in and the tricks taken so far.
+ * ---------------------------------------------------------------------------- */
+
+// A khisht is a failed positive bid (called ≥1, took 0) — drawn as a box, never
+// a number.
+function isKhisht(bid: number, taken: number): boolean {
+  return bid >= 1 && taken === 0;
+}
+
+// The folk running-total notation: points ÷ 100 with a comma decimal. All point
+// values are multiples of ten, so one decimal is exact (700→"7,0", −150→"−1,5").
+function fmtTotal(n: number): string {
+  return (n / 100).toFixed(1).replace(".", ",").replace("-", "−");
+}
+
+// Does a round (and thus a subtotal band) end after this deal?
+function roundEndsAfter(handIndex: number, handCount: number): boolean {
+  if (handIndex + 1 >= handCount) return false; // the very end gets the footer, not a band
+  return roundOf(handIndex).round !== roundOf(handIndex + 1).round;
+}
+
+function ScoreGrid({
+  G,
+  me,
+  ended,
+  roundLabel,
+  teamColor,
+}: {
+  G: JokeriView;
+  me: string;
+  ended: boolean;
+  roundLabel: string;
+  teamColor: (p: string) => string;
+}) {
+  const results = G.handResults ?? [];
+  const running: Record<string, number> = Object.fromEntries(G.players.map((p) => [p, 0]));
+
+  // Keep the newest deal (the live row) in view as the sheet fills up.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [results.length, G.handIndex]);
+
+  // Build the body: each scored deal, a subtotal band at every round break, and
+  // finally the live current deal.
+  const rows: ReactNode[] = [];
+  for (const hr of results) {
+    for (const p of G.players) running[p] = (running[p] ?? 0) + (hr.delta[p] ?? 0);
+    rows.push(
+      <tr key={`h${hr.handIndex}`} className="jk-g-row">
+        <td className="jk-g-deal">{hr.handSize}</td>
+        {G.players.map((p) => (
+          <ScoreCell key={p} bid={hr.bids[p] ?? 0} pts={hr.delta[p] ?? 0} taken={hr.taken[p] ?? 0} />
+        ))}
+      </tr>,
+    );
+    if (roundEndsAfter(hr.handIndex, G.handCount)) {
+      const snapshot = { ...running };
+      rows.push(
+        <tr key={`b${hr.handIndex}`} className="jk-g-band">
+          <td className="jk-g-deal" aria-hidden />
+          {G.players.map((p) => (
+            <td key={p} className="jk-g-total">
+              {fmtTotal(snapshot[p] ?? 0)}
+            </td>
+          ))}
+        </tr>,
+      );
+    }
+  }
+
+  // The live, in-progress deal — shown until the match is done.
+  const played = results.some((r) => r.handIndex === G.handIndex);
+  if (!ended && G.phase !== "done" && !played) {
+    rows.push(
+      <tr key="live" className="jk-g-row live">
+        <td className="jk-g-deal">{G.handSize || "·"}</td>
+        {G.players.map((p) => (
+          <td key={p} className={`jk-g-cell ${p === G.toAct ? "acting" : ""}`}>
+            <span className="jk-cellbox">
+              <span className="jk-bidnum">{fmtLiveBid(G.bids[p])}</span>
+              <span className="jk-pts live">·{G.taken[p] ?? 0}</span>
+            </span>
+          </td>
+        ))}
+      </tr>,
+    );
+  }
+
   return (
-    <div className="jk-teamtotals">
-      {G.teams.map((team, i) => {
-        const total = team.reduce((s, p) => s + (G.scores[p] ?? 0), 0);
-        return (
-          <div key={i} className="jk-teamtotal">
-            <span className="jk-team-dot" style={{ background: TEAM_COLORS[i % TEAM_COLORS.length] }} />
-            <span className="jk-team-name">Team {String.fromCharCode(65 + i)}</span>
-            <span className="jk-team-sum">{total}</span>
+    <aside className="jk-paper">
+      <div className="jk-paper-head">
+        <span className="jk-paper-title">Scoresheet</span>
+        <span className="jk-round">{roundLabel}</span>
+      </div>
+      <div className="jk-trump">
+        <span className="jk-trump-lbl">trump</span>
+        {G.trump ? <SuitGlyph s={G.trump} size={22} /> : <span className="jk-notrump">NT</span>}
+        {G.handSize > 0 && <span className="jk-handsize">{G.handSize}-card deal</span>}
+      </div>
+
+      <div className="jk-grid-scroll" ref={scrollRef}>
+        <table className="jk-grid">
+          <thead>
+            <tr>
+              <th className="jk-g-deal" title="cards dealt">#</th>
+              {G.players.map((p) => {
+                const tc = teamColor(p);
+                const acting = p === G.toAct && !ended;
+                return (
+                  <th key={p} className={`jk-g-name ${p === me ? "you" : ""}`}>
+                    {tc && <span className="jk-team-dot" style={{ background: tc }} />}
+                    <span className="jk-g-nick">{p === me ? "You" : shortName(p)}</span>
+                    {p === G.dealer && <span className="jk-badge" title="dealer">D</span>}
+                    {acting && <span className="jk-turn-dot" />}
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody>{rows}</tbody>
+        </table>
+      </div>
+
+      {/* standings footer — always-visible running totals (and team sums) ÷100 */}
+      <div className="jk-standings">
+        <div className="jk-stand-row heads" style={{ ["--cols" as string]: G.players.length }}>
+          <span className="jk-stand-lbl">now</span>
+          {G.players.map((p) => (
+            <span key={p} className="jk-stand-tot">
+              {fmtTotal(G.scores[p] ?? 0)}
+            </span>
+          ))}
+        </div>
+        {G.mode === "teams" && (
+          <div className="jk-teamtotals">
+            {G.teams.map((team, i) => {
+              const total = team.reduce((s, p) => s + (G.scores[p] ?? 0), 0);
+              return (
+                <div key={i} className="jk-teamtotal">
+                  <span className="jk-team-dot" style={{ background: TEAM_COLORS[i % TEAM_COLORS.length] }} />
+                  <span className="jk-team-name">Team {String.fromCharCode(65 + i)}</span>
+                  <span className="jk-team-sum">{fmtTotal(total)}</span>
+                </div>
+              );
+            })}
           </div>
-        );
-      })}
-    </div>
+        )}
+      </div>
+    </aside>
   );
+}
+
+// One scored cell: "bid │ points", with a struck box in place of the number for
+// a khisht.
+function ScoreCell({ bid, pts, taken }: { bid: number; pts: number; taken: number }) {
+  const khisht = isKhisht(bid, taken);
+  return (
+    <td className="jk-g-cell">
+      <span className="jk-cellbox">
+        <span className="jk-bidnum">{bid === 0 ? "–" : bid}</span>
+        {khisht ? (
+          <span className="jk-khisht" title={`khisht ${pts}`}>
+            ‒‒
+          </span>
+        ) : (
+          <span className="jk-pts">{pts}</span>
+        )}
+      </span>
+    </td>
+  );
+}
+
+function fmtLiveBid(b: number | null | undefined): string {
+  if (b == null) return "·"; // not yet bid
+  return b === 0 ? "–" : String(b);
 }
 
 function fmtBid(b: number | null | undefined): string {

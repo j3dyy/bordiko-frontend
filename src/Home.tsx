@@ -60,11 +60,11 @@ export function Home({
     setSetupFor(gameId);
   }
 
-  async function create(gameId: string, seats: number, mode: "solo" | "teams", visibility: "public" | "private", password: string) {
+  async function create(gameId: string, seats: number, mode: "solo" | "teams", visibility: "public" | "private", password: string, khisht: string) {
     setBusy(gameId);
     setErr("");
     try {
-      const lobby = await createLobby(gameId, seats, mode, visibility, password);
+      const lobby = await createLobby(gameId, seats, mode, visibility, password, khisht);
       setSetupFor("");
       onWaiting(lobby);
     } catch (e) {
@@ -174,7 +174,7 @@ export function Home({
           gameId={setupFor}
           busy={busy === setupFor}
           err={err}
-          onSubmit={(seats, mode, visibility, password) => create(setupFor, seats, mode, visibility, password)}
+          onSubmit={(seats, mode, visibility, password, khisht) => create(setupFor, seats, mode, visibility, password, khisht)}
           onClose={() => setSetupFor("")}
         />
       )}

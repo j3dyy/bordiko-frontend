@@ -46,11 +46,11 @@ export function GameDetail({
     else void create(m.minPlayers, "solo");
   }
 
-  async function create(seats: number, mode: "solo" | "teams") {
+  async function create(seats: number, mode: "solo" | "teams", khisht = "") {
     setBusy(true);
     setErr("");
     try {
-      const lobby = await createLobby(gameId, seats, mode);
+      const lobby = await createLobby(gameId, seats, mode, "public", "", khisht);
       setSetup(false);
       onWaiting(lobby);
     } catch (e) {
@@ -156,7 +156,7 @@ export function GameDetail({
           gameId={gameId}
           busy={busy}
           err={err}
-          onSubmit={(seats, mode) => create(seats, mode)}
+          onSubmit={(seats, mode, _vis, _pw, khisht) => create(seats, mode, khisht)}
           onClose={() => setSetup(false)}
         />
       )}
