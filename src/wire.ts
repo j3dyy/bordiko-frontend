@@ -36,6 +36,8 @@ export interface StateMsg {
   // Unix-ms deadline for the current turn; the gateway auto-plays a safe move if
   // the acting player doesn't move in time. Absent when there's no timer.
   turnDeadline?: number;
+  // player id → display name, so the board can label seats by name (not raw id).
+  names?: Record<string, string>;
 }
 
 export interface MatchSummary {

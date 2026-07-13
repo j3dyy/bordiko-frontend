@@ -35,6 +35,19 @@ export function loginURL(provider: string, name?: string): string {
   return `${GATEWAY}/auth/${provider}/login${q}`;
 }
 
+// Set a custom display name (shown on the board, leaderboards, etc.). Returns
+// the saved name; the caller should refresh the auth context afterwards.
+export async function setUsername(name: string): Promise<{ id: string; displayName: string; avatarUrl?: string }> {
+  return json(
+    await req("/auth/username", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name }),
+    }),
+    "setUsername",
+  );
+}
+
 export async function logout(): Promise<void> {
   await req("/auth/logout", { method: "POST" });
 }

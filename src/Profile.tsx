@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { fetchCatalog, fetchLeaderboard } from "./api.ts";
+import { fetchCatalog, fetchLeaderboard, setUsername } from "./api.ts";
+import { useAuth } from "./auth.tsx";
 import { gameMeta } from "./games.ts";
 import type { LeaderRow, User } from "./wire.ts";
 
@@ -20,6 +21,30 @@ export function Profile({
 }) {
   const [stats, setStats] = useState<GameStat[]>([]);
   const [loading, setLoading] = useState(true);
+  const { refresh } = useAuth();
+  const [editing, setEditing] = useState(false);
+  const [nameInput, setNameInput] = useState(user.displayName);
+  const [savingName, setSavingName] = useState(false);
+  const [nameErr, setNameErr] = useState("");
+
+  async function saveName() {
+    const name = nameInput.trim();
+    if (!name || name === user.displayName) {
+      setEditing(false);
+      return;
+    }
+    setSavingName(true);
+    setNameErr("");
+    try {
+      await setUsername(name);
+      await refresh(); // update the name everywhere (topbar, board labels use the session)
+      setEditing(false);
+    } catch (e) {
+      setNameErr((e as Error).message || "Couldn't save name.");
+    } finally {
+      setSavingName(false);
+    }
+  }
 
   useEffect(() => {
     let live = true;
@@ -63,7 +88,33 @@ export function Profile({
           <span className="profile-avatar ph">{(user.displayName.trim()[0] ?? "?").toUpperCase()}</span>
         )}
         <div className="profile-id">
-          <h1 className="profile-name">{user.displayName}</h1>
+          {editing ? (
+            <div className="name-edit">
+              <input
+                autoFocus
+                value={nameInput}
+                maxLength={24}
+                onChange={(e) => setNameInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void saveName();
+                  if (e.key === "Escape") setEditing(false);
+                }}
+                aria-label="display name"
+              />
+              <button onClick={() => void saveName()} disabled={savingName}>
+                {savingName ? "Saving…" : "Save"}
+              </button>
+              <button className="ghost" onClick={() => { setEditing(false); setNameInput(user.displayName); setNameErr(""); }} disabled={savingName}>
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <h1 className="profile-name">
+              {user.displayName}
+              <button className="name-pencil" onClick={() => { setNameInput(user.displayName); setEditing(true); }} title="Edit name" aria-label="Edit name">✎</button>
+            </h1>
+          )}
+          {nameErr && <div className="error">{nameErr}</div>}
           <div className="profile-provider">{providerLabel(user.id)}</div>
         </div>
         <div className="profile-totals">

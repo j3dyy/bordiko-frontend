@@ -36,6 +36,8 @@ interface JokeriView {
   leader: string;
   calledSuit: string | null;
   trick: TrickCard[];
+  lastTrick: TrickCard[];
+  lastTrickWinner: string | null;
   bids: Record<string, number | null>;
   taken: Record<string, number>;
   scores: Record<string, number>;
@@ -109,6 +111,8 @@ export function JokeriBoard({
   const myIdx = G.players.indexOf(me);
   const compassOf = (p: string) => DIRS[(((G.players.indexOf(p) - myIdx) % 4) + 4) % 4];
   const seatOf = (dir: string) => G.players.find((p) => compassOf(p) === dir);
+  // Prefer the player's display name (from the gateway) over the raw id.
+  const nameOf = (id: string) => state.names?.[id] ?? shortName(id);
 
   /* ------------------------------- actions ------------------------------- */
   function clickCard(c: JCard) {
@@ -135,23 +139,23 @@ export function JokeriBoard({
     : G.phase === "trump"
       ? state.yourTurn
         ? "Choose the trump suit for this deal — or no-trump."
-        : `${shortName(G.toAct)} is choosing the trump…`
+        : `${nameOf(G.toAct)} is choosing the trump…`
       : G.phase === "bid"
         ? state.yourTurn
           ? "Declare how many tricks you'll take (0 to pass)."
-          : `${shortName(G.toAct)} is bidding…`
+          : `${nameOf(G.toAct)} is bidding…`
         : state.yourTurn
           ? isLead
             ? "Your lead — play any card."
             : G.calledSuit
               ? `Follow ${suitName(G.calledSuit)} if you can, or play a Joker.`
               : "Play a card."
-          : `Waiting for ${shortName(G.toAct)}…`;
+          : `Waiting for ${nameOf(G.toAct)}…`;
 
   return (
     <div className="jokeri">
       {/* ---------------- left scoresheet "paper" (traditional grid) ---------------- */}
-      <ScoreGrid G={G} me={me} ended={!!state.ended} roundLabel={roundLabel} teamColor={teamColor} />
+      <ScoreGrid G={G} me={me} ended={!!state.ended} roundLabel={roundLabel} teamColor={teamColor} nameOf={nameOf} />
 
       {/* ---------------- the table: four seats facing each other ---------------- */}
       <div className="jk-table">
@@ -165,6 +169,7 @@ export function JokeriBoard({
               G={G}
               acting={(() => { const p = seatOf(dir); return !!p && p === G.toAct && !state.ended; })()}
               teamColor={teamColor}
+              nameOf={nameOf}
             />
           ))}
 
@@ -175,14 +180,14 @@ export function JokeriBoard({
               const t = G.trick.find((tc) => compassOf(tc.player) === dir);
               return (
                 <div key={dir} className={`jk-play ${dir} ${t ? "on" : ""}`}>
-                  {t && <PlayCard c={t.card} mode={t.jokerMode} size={70} />}
+                  {t && <PlayCard c={t.card} mode={t.jokerMode} size={80} />}
                 </div>
               );
             })}
             {G.trick.length === 0 && (
               <div className="jk-felt-empty">
                 {G.phase === "play"
-                  ? `${G.leader === me ? "You lead" : `${shortName(G.leader)} leads`}`
+                  ? `${G.leader === me ? "You lead" : `${nameOf(G.leader)} leads`}`
                   : G.phase === "bid"
                     ? "bidding"
                     : G.phase === "trump"
@@ -193,6 +198,26 @@ export function JokeriBoard({
             {G.calledSuit && G.phase === "play" && (
               <div className="jk-called">
                 led <SuitGlyph s={G.calledSuit} size={18} />
+              </div>
+            )}
+
+            {/* the previous (completed) trick, always reviewable during the hand */}
+            {G.lastTrick?.length > 0 && (
+              <div className="jk-lasttrick">
+                <span className="jk-lt-lbl">
+                  last trick · {G.lastTrickWinner === me ? "you won" : `${nameOf(G.lastTrickWinner ?? "")} won`}
+                </span>
+                <div className="jk-lt-cards">
+                  {G.lastTrick.map((t, i) => (
+                    <div
+                      key={i}
+                      className={`jk-lt-card ${t.player === G.lastTrickWinner ? "won" : ""}`}
+                      title={t.player === me ? "You" : nameOf(t.player)}
+                    >
+                      {isJoker(t.card) ? <Card joker size={32} /> : <Card r={t.card.r} s={t.card.s} size={32} />}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -248,7 +273,7 @@ export function JokeriBoard({
                   onClick={() => clickCard(c)}
                 >
                   <div className={`jk-lift ${playing === k ? "playing" : ""}`}>
-                    <PlayCard c={c} size={92} />
+                    <PlayCard c={c} size={100} />
                   </div>
                 </div>
               );
@@ -319,6 +344,7 @@ function TableSeat({
   dir,
   acting,
   teamColor,
+  nameOf,
 }: {
   G: JokeriView;
   p: string | undefined;
@@ -326,6 +352,7 @@ function TableSeat({
   dir: "north" | "west" | "east" | "south";
   acting: boolean;
   teamColor: (p: string) => string;
+  nameOf: (id: string) => string;
 }) {
   if (!p) return <div className={`jk-seat ${dir} empty`} />;
   const isMe = p === me;
@@ -336,7 +363,7 @@ function TableSeat({
       <div className="jk-seat-plate">
         <div className="jk-seat-head">
           {tc && <span className="jk-team-dot" style={{ background: tc }} />}
-          <span className="jk-seat-name">{isMe ? "You" : shortName(p)}</span>
+          <span className="jk-seat-name">{isMe ? "You" : nameOf(p)}</span>
           {p === G.dealer && <span className="jk-badge" title="dealer">D</span>}
           {acting && <span className="jk-turn-dot" />}
         </div>
@@ -393,12 +420,14 @@ function ScoreGrid({
   ended,
   roundLabel,
   teamColor,
+  nameOf,
 }: {
   G: JokeriView;
   me: string;
   ended: boolean;
   roundLabel: string;
   teamColor: (p: string) => string;
+  nameOf: (id: string) => string;
 }) {
   const results = G.handResults ?? [];
   const running: Record<string, number> = Object.fromEntries(G.players.map((p) => [p, 0]));
@@ -479,7 +508,7 @@ function ScoreGrid({
                 return (
                   <th key={p} className={`jk-g-name ${p === me ? "you" : ""}`}>
                     {tc && <span className="jk-team-dot" style={{ background: tc }} />}
-                    <span className="jk-g-nick">{p === me ? "You" : shortName(p)}</span>
+                    <span className="jk-g-nick">{p === me ? "You" : nameOf(p)}</span>
                     {p === G.dealer && <span className="jk-badge" title="dealer">D</span>}
                     {acting && <span className="jk-turn-dot" />}
                   </th>

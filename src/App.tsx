@@ -89,7 +89,7 @@ export function App() {
   const inGame = view.screen === "game";
 
   return (
-    <div className="app">
+    <div className={`app${inGame ? " in-game" : ""}`}>
       <header className="topbar">
         <button className="brand" onClick={goHome}>
           <img className="brand-mark" src="/bordiko-icon.svg" alt="" /> Bordiko
