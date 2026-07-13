@@ -103,6 +103,8 @@ export interface Lobby {
   mode: "solo" | "teams";
   visibility: "public" | "private";
   hasPassword: boolean;
+  khisht?: string; // jokeri only: "spec" | a flat number
+  format?: string; // jokeri only: "nines" (direct-nines); absent ⇒ standard
   seats: Seat[];
   matchId?: string;
   status: "open" | "started";

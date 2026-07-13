@@ -142,6 +142,12 @@ export function Waiting({
             {current.visibility === "private" && (
               <span className="mode-badge private">🔒 {current.hasPassword ? "Private · password" : "Private"}</span>
             )}
+            {current.gameId === "jokeri" && (
+              <span className="mode-badge">
+                {current.format === "nines" ? "Direct nines" : "Standard · 24"}
+                {current.khisht ? ` · khisht ${current.khisht === "spec" ? "−100×deal" : current.khisht}` : ""}
+              </span>
+            )}
           </div>
         </div>
 

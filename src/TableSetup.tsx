@@ -18,7 +18,7 @@ export function TableSetup({
   gameId: string;
   busy: boolean;
   err: string;
-  onSubmit: (seats: number, mode: "solo" | "teams", visibility: "public" | "private", password: string, khisht: string) => void;
+  onSubmit: (seats: number, mode: "solo" | "teams", visibility: "public" | "private", password: string, khisht: string, format: string) => void;
   onClose: () => void;
 }) {
   const m = gameMeta(gameId);
@@ -29,6 +29,9 @@ export function TableSetup({
   // Jokeri only: the khisht penalty (failed positive bid). "spec" = −100 × the
   // deal size (the classic paper rule); otherwise a flat number.
   const [khisht, setKhisht] = useState("spec");
+  // Jokeri only: the deal schedule. "standard" = the full 24-deal classic;
+  // "nines" = direct-nines (eight 9-card deals, a faster game).
+  const [jokeriFormat, setJokeriFormat] = useState("standard");
   const isJokeri = gameId === "jokeri";
 
   const counts: number[] = [];
@@ -95,6 +98,28 @@ export function TableSetup({
 
         {isJokeri && (
           <div className="ts-field">
+            <span className="ts-label">Deal schedule</span>
+            <div className="ts-formats">
+              <button
+                className={jokeriFormat === "standard" ? "fmt active" : "fmt"}
+                onClick={() => setJokeriFormat("standard")}
+              >
+                <span className="fmt-title">Standard</span>
+                <span className="fmt-sub">Classic 24 deals · 1→8, 9s, 8→1, 9s</span>
+              </button>
+              <button
+                className={jokeriFormat === "nines" ? "fmt active" : "fmt"}
+                onClick={() => setJokeriFormat("nines")}
+              >
+                <span className="fmt-title">Direct nines</span>
+                <span className="fmt-sub">Eight 9-card deals · faster</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {isJokeri && (
+          <div className="ts-field">
             <span className="ts-label">Khisht <span className="ts-optional">failed bid</span></span>
             <div className="seg">
               {(
@@ -152,7 +177,7 @@ export function TableSetup({
           </button>
           <button
             disabled={busy}
-            onClick={() => onSubmit(seats, teamsEligible ? mode : "solo", visibility, visibility === "private" ? password.trim() : "", isJokeri ? khisht : "")}
+            onClick={() => onSubmit(seats, teamsEligible ? mode : "solo", visibility, visibility === "private" ? password.trim() : "", isJokeri ? khisht : "", isJokeri ? jokeriFormat : "")}
           >
             {busy ? "Creating…" : "Create table"}
           </button>
