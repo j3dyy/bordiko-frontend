@@ -263,11 +263,19 @@ export function JokeriBoard({
                       : "—"}
               </div>
             )}
-            {G.calledSuit && G.phase === "play" && (
-              <div className="jk-called">
-                led <SuitGlyph s={G.calledSuit} size={18} />
-              </div>
-            )}
+            {G.calledSuit && G.phase === "play" && (() => {
+              const lead = G.trick.find((t) => t.player === G.leader);
+              const jokerLed = lead && isJoker(lead.card);
+              return (
+                <div className={`jk-called ${jokerLed ? "joker" : ""}`}>
+                  {jokerLed ? (
+                    <>🃏 {lead.jokerMode === "high" ? "high" : "low"} · calls <SuitGlyph s={G.calledSuit} size={18} /></>
+                  ) : (
+                    <>led <SuitGlyph s={G.calledSuit} size={18} /></>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* the previous (completed) trick, always reviewable during the hand */}
             {G.lastTrick?.length > 0 && (
@@ -418,7 +426,7 @@ function PlayCard({ c, size = 92, mode }: { c: JCard; size?: number; mode?: "hig
   return (
     <div className="jk-card" style={{ position: "relative" }}>
       {joker ? <Card joker size={size} /> : <Card r={c.r} s={c.s} size={size} />}
-      {mode && <span className={`jk-mode-tag ${mode}`}>{mode === "high" ? "▲" : "▼"}</span>}
+      {mode && <span className={`jk-mode-tag ${mode}`}>{mode === "high" ? "HIGH ▲" : "LOW ▼"}</span>}
     </div>
   );
 }
