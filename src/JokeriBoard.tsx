@@ -34,6 +34,7 @@ interface JokeriView {
   trumpCard: JCard | null;
   firstActor: string;
   toAct: string;
+  forbiddenBid?: number; // savaldebulo: the bid the current bidder may not make (-1 if none)
   leader: string;
   calledSuit: string | null;
   trick: TrickCard[];
@@ -307,17 +308,29 @@ export function JokeriBoard({
 
         {state.yourTurn && G.phase === "bid" && (
           <div className="jk-panel">
-            <span className="jk-panel-lbl">Your bid</span>
+            <span className="jk-panel-lbl">
+              Your bid
+              {G.forbiddenBid != null && G.forbiddenBid >= 0 && (
+                <span className="jk-savaldebulo" title="savaldebulo — the four bids can't total the tricks, so someone must miss">
+                  savaldebulo · can't say {G.forbiddenBid}
+                </span>
+              )}
+            </span>
             <div className="jk-bid-row">
-              {Array.from({ length: G.handSize + 1 }, (_, b) => (
-                <button
-                  key={b}
-                  className={`jk-bid-btn ${b === 0 ? "pass" : ""}`}
-                  onClick={() => onMove("bid", { bid: b })}
-                >
-                  {b === 0 ? "Pass" : b}
-                </button>
-              ))}
+              {Array.from({ length: G.handSize + 1 }, (_, b) => {
+                const forbidden = b === G.forbiddenBid;
+                return (
+                  <button
+                    key={b}
+                    className={`jk-bid-btn ${b === 0 ? "pass" : ""} ${forbidden ? "forbidden" : ""}`}
+                    disabled={forbidden}
+                    title={forbidden ? "savaldebulo: the bids can't total the number of tricks" : undefined}
+                    onClick={() => onMove("bid", { bid: b })}
+                  >
+                    {b === 0 ? "Pass" : b}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}

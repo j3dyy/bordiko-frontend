@@ -1021,6 +1021,8 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 .jk-bid-btn { min-width: 40px; background: var(--card); color: var(--text); border: 1.5px solid var(--line-2); border-radius: 11px; padding: 8px 0; font-weight: 700; }
 .jk-bid-btn:hover:not(:disabled) { border-color: var(--brand); color: var(--brand); }
 .jk-bid-btn.pass { background: var(--tint-yellow); color: #5a3d00; border-color: transparent; }
+.jk-bid-btn.forbidden { opacity: 0.4; text-decoration: line-through; cursor: not-allowed; background: rgba(216, 58, 52, 0.08); border-color: rgba(216, 58, 52, 0.3); color: var(--red, #d83a34); }
+.jk-savaldebulo { margin-left: 8px; font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--red, #d83a34); background: rgba(216, 58, 52, 0.12); border-radius: 8px; padding: 2px 7px; text-transform: none; letter-spacing: 0; }
 
 /* your hand */
 .jk-hand-area { position: relative; }
