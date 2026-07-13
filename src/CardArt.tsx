@@ -9,7 +9,17 @@ const INK = "#16141F"; // clubs / spades
 const BACK = "#6C4CF1"; // card back (purple)
 const BORDER = "#E4E1E7";
 const WILD = ["#6C4CF1", "#17C0A4", "#FFC53D", "#FF6A3D"]; // logo colors: S H C D
+const JOKER_COLOR: Record<string, string> = { red: RED, black: INK, brand: BACK };
 const col = (s: string) => (s === "H" || s === "D" ? RED : INK);
+
+const STAR = "M50 4 L60.6 35.4 L93.7 35.8 L67.1 55.6 L77 87.2 L50 68 L23 87.2 L32.9 55.6 L6.3 35.8 L39.4 35.4 Z";
+function Star({ x, y, sz, fill }: { x: number; y: number; sz: number; fill: string }) {
+  return (
+    <g transform={`translate(${x},${y}) scale(${sz / 100}) translate(-50,-50)`}>
+      <path d={STAR} fill={fill} />
+    </g>
+  );
+}
 
 /* ---------------- suit shapes (drawn in a 0..100 box) ---------------- */
 const SUIT: Record<string, string> = {
@@ -115,11 +125,52 @@ function Back() {
   );
 }
 
+/* ---------------- joker (the ultimate wild) ---------------- */
+function JokerCorner({ color, flip }: { color: string; flip?: boolean }) {
+  const g = (
+    <g>
+      <Star x={34} y={40} sz={30} fill={color} />
+      <text x="34" y="66" textAnchor="middle" dominantBaseline="central" fontFamily="'Space Grotesk',sans-serif" fontWeight="600" fontSize="9" letterSpacing="0.5" fill={color}>JOKER</text>
+    </g>
+  );
+  return flip ? <g transform="rotate(180 120 168)">{g}</g> : g;
+}
+function JokerFace({ color }: { color: string }) {
+  return (
+    <>
+      <rect x="2" y="2" width="236" height="332" rx="20" fill="#fff" stroke={BORDER} strokeWidth="2" />
+      <circle cx="120" cy="150" r="74" fill={color} opacity="0.06" />
+      <Star x={120} y={150} sz={150} fill={color} />
+      <text x="120" y="254" textAnchor="middle" dominantBaseline="central" fontFamily="'Space Grotesk',sans-serif" fontWeight="700" fontSize="30" letterSpacing="5" fill={INK}>JOKER</text>
+      <g>{WILD.map((c, i) => <circle key={i} cx={96 + i * 16} cy="280" r="5" fill={c} />)}</g>
+      <JokerCorner color={color} />
+      <JokerCorner color={color} flip />
+    </>
+  );
+}
+
 /* ---------------- <Card> ---------------- */
-export function Card({ r, s, size = 120, back = false, style }: { r?: string; s?: string; size?: number; back?: boolean; style?: CSSProperties }) {
+export function Card({
+  r,
+  s,
+  size = 120,
+  back = false,
+  joker = false,
+  style,
+}: {
+  r?: string;
+  s?: string;
+  size?: number;
+  back?: boolean;
+  joker?: boolean | "red" | "black" | "brand";
+  style?: CSSProperties;
+}) {
+  const jokerColor = joker === true ? JOKER_COLOR.red : joker ? JOKER_COLOR[joker] : "";
   return (
     <svg viewBox="0 0 240 336" width={size} height={(size * 336) / 240} style={{ display: "block", ...style }}>
-      {back ? (
+      {joker ? (
+        <JokerFace color={jokerColor} />
+      ) : back ? (
         <Back />
       ) : (
         <>

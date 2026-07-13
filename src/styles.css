@@ -420,7 +420,23 @@ code { font-family: var(--font-mono); }
 .dot.off { background: var(--line-2); }
 .turn.you { color: var(--brand); font-weight: 600; }
 .result { color: var(--brand-700); font-family: var(--font-display); font-weight: 700; }
-.statusbar .ghost { margin-left: auto; }
+.statusbar-actions { margin-left: auto; display: flex; gap: 8px; }
+
+/* per-turn countdown */
+.turn-timer {
+  font-family: var(--font-mono); font-size: 12.5px; font-weight: 700; color: var(--muted);
+  background: var(--panel); border-radius: 8px; padding: 2px 8px;
+}
+.turn-timer.you { color: var(--brand); background: var(--tint-purple); }
+.turn-timer.urgent { color: #b42318; background: rgba(216, 58, 52, 0.12); animation: jk-pulse 1s ease-in-out infinite; }
+
+/* destructive buttons (Leave & forfeit) */
+button.danger { background: var(--red, #D83A34); color: #fff; border: none; }
+button.danger:hover:not(:disabled) { background: #b42318; }
+.ghost.danger { background: transparent; color: var(--red, #D83A34); border: 1.5px solid rgba(216, 58, 52, 0.4); }
+.ghost.danger:hover:not(:disabled) { background: rgba(216, 58, 52, 0.08); border-color: var(--red, #D83A34); }
+.confirm-leave { max-width: 420px; }
+.confirm-leave h3 { margin: 0 0 6px; font-family: var(--font-display); }
 
 /* in-game layout: board fills, chat sits alongside */
 .game-stage { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; margin-top: 4px; }

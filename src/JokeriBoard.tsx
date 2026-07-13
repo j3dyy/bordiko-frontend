@@ -293,14 +293,13 @@ export function JokeriBoard({
 
 /* -------------------------------- pieces --------------------------------- */
 
-// A card that renders the two black sixes as Jokers (a 6♠/6♣ with a JOKER
-// ribbon), optionally tagged high/low when it's on the table.
+// A card that renders the two black sixes as the dedicated JOKER face,
+// optionally tagged high/low when it's on the table.
 function PlayCard({ c, size = 92, mode }: { c: JCard; size?: number; mode?: "high" | "low" }) {
   const joker = isJoker(c);
   return (
-    <div className={`jk-card ${joker ? "joker" : ""}`} style={{ position: "relative" }}>
-      <Card r={c.r} s={c.s} size={size} />
-      {joker && <span className="jk-joker-tag">JOKER</span>}
+    <div className="jk-card" style={{ position: "relative" }}>
+      {joker ? <Card joker size={size} /> : <Card r={c.r} s={c.s} size={size} />}
       {mode && <span className={`jk-mode-tag ${mode}`}>{mode === "high" ? "▲" : "▼"}</span>}
     </div>
   );

@@ -164,6 +164,14 @@ export async function cancelLobby(id: string): Promise<void> {
   await req(`/api/lobby/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
+/* -------------------------------- match ----------------------------------- */
+
+// Leave an in-progress match: the caller's team forfeits so the others aren't
+// stuck and everyone is freed to start a new game.
+export async function leaveMatch(matchId: string): Promise<void> {
+  await req(`/api/matches/${encodeURIComponent(matchId)}/leave`, { method: "POST" });
+}
+
 /* ----------------------------- leaderboard -------------------------------- */
 
 export async function fetchLeaderboard(gameId: string): Promise<LeaderRow[]> {

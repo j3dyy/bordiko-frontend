@@ -86,7 +86,7 @@ const KNOWN: Record<string, Omit<GameMeta, "id">> = {
   jokeri: {
     name: "Jokeri",
     blurb: "Bid your tricks and take exactly what you called. Two black-six Jokers rule the deck. Play solo or in partnerships.",
-    minPlayers: 3,
+    minPlayers: 4,
     maxPlayers: 4,
     renderer: "jokeri",
     accent: "#D83A34",

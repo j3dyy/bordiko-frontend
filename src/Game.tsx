@@ -1,20 +1,30 @@
 import { useEffect, useRef, useState } from "react";
 import { useMatch } from "./useMatch.ts";
+import { leaveMatch } from "./api.ts";
 import { HexBoard } from "./HexBoard.tsx";
 import { EightsBoard } from "./EightsBoard.tsx";
 import { JokeriBoard } from "./JokeriBoard.tsx";
 import { AutoBoard } from "./AutoBoard.tsx";
 import { RateBar } from "./RateBar.tsx";
 import { gameMeta } from "./games.ts";
-import type { ChatMsg, StateMsg } from "./wire.ts";
+import type { StateMsg } from "./wire.ts";
+import type { ChatMsg } from "./wire.ts";
+
+// A player's outcome from a result that may be a single winner, a team
+// winners/losers list (Jokeri, forfeits), or a draw.
+function outcomeFor(result: StateMsg["result"], myId: string): "win" | "lose" | "draw" | null {
+  if (!result) return null;
+  if (result.draw) return "draw";
+  if (result.winners?.length) return result.winners.includes(myId) ? "win" : "lose";
+  if (result.losers?.length) return result.losers.includes(myId) ? "lose" : "win";
+  if (result.winner) return result.winner === myId ? "win" : "lose";
+  return null;
+}
 
 function resultText(s: StateMsg, myId: string): string {
-  if (s.result?.draw) return "Draw";
-  if (s.result?.winner) {
-    const who = s.result.winner === myId ? "You win" : "You lose";
-    return `${who}${s.result.reason ? ` — ${s.result.reason}` : ""}`;
-  }
-  return "Game over";
+  const o = outcomeFor(s.result, myId);
+  const label = o === "draw" ? "Draw" : o === "win" ? "You win" : o === "lose" ? "You lose" : "Game over";
+  return `${label}${s.result?.reason ? ` — ${s.result.reason}` : ""}`;
 }
 
 export function Game({
@@ -33,11 +43,25 @@ export function Game({
   const { state, connected, errors, chat, sendMove, sendChat } = useMatch(matchId, playerId);
   const meta = gameMeta(gameId);
   const [dismissed, setDismissed] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const [leaving, setLeaving] = useState(false);
 
   // Reset the "dismissed game-over" flag when we enter a different match.
   useEffect(() => {
     setDismissed(false);
+    setConfirmLeave(false);
   }, [matchId]);
+
+  // Forfeit and quit: end the match (our team loses) so we're freed, then leave.
+  async function forfeit() {
+    setLeaving(true);
+    try {
+      await leaveMatch(matchId);
+    } catch {
+      /* best-effort — leave the page regardless so we're never trapped here */
+    }
+    onLeave();
+  }
 
   return (
     <div className="game">
@@ -53,10 +77,18 @@ export function Game({
             {state.yourTurn ? "● your turn" : "waiting…"}
           </span>
         )}
+        {state && !state.ended && <TurnTimer deadline={state.turnDeadline} yourTurn={state.yourTurn} />}
         {state?.ended && <span className="result">{resultText(state, playerId)}</span>}
-        <button className="ghost" onClick={onLeave}>
-          Leave
-        </button>
+        <span className="statusbar-actions">
+          <button className="ghost" onClick={onLeave} title="Leave the page; you can resume this match later">
+            Back
+          </button>
+          {state && !state.ended && (
+            <button className="ghost danger" onClick={() => setConfirmLeave(true)} disabled={leaving}>
+              {leaving ? "Leaving…" : "Leave game"}
+            </button>
+          )}
+        </span>
       </div>
 
       <div className="game-stage">
@@ -99,7 +131,48 @@ export function Game({
           onDismiss={() => setDismissed(true)}
         />
       )}
+
+      {confirmLeave && (
+        <div className="modal-backdrop" onClick={() => setConfirmLeave(false)}>
+          <div className="modal confirm-leave" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+            <h3>Leave the game?</h3>
+            <p className="hint">
+              This match can't continue without you, so your team forfeits and it counts as a loss. Everyone will be
+              freed to start a new game. To just step away and resume later, use <strong>Back</strong> instead.
+            </p>
+            <div className="ts-actions">
+              <button className="ghost" onClick={() => setConfirmLeave(false)} disabled={leaving}>
+                Keep playing
+              </button>
+              <button className="danger" onClick={forfeit} disabled={leaving}>
+                {leaving ? "Leaving…" : "Leave & forfeit"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+// A live per-turn countdown from the server's deadline. The gateway auto-plays a
+// safe move when it hits zero, so this is a warning, not a hard client cutoff.
+function TurnTimer({ deadline, yourTurn }: { deadline?: number; yourTurn: boolean }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!deadline) return;
+    const id = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(id);
+  }, [deadline]);
+  if (!deadline) return null;
+  const left = Math.max(0, Math.ceil((deadline - now) / 1000));
+  const mm = Math.floor(left / 60);
+  const ss = String(left % 60).padStart(2, "0");
+  const urgent = left <= 10;
+  return (
+    <span className={`turn-timer${urgent ? " urgent" : ""}${yourTurn ? " you" : ""}`} title="time left this turn">
+      ⏱ {mm}:{ss}
+    </span>
   );
 }
 
@@ -120,11 +193,10 @@ function GameOver({
   onLeaderboard?: () => void;
   onDismiss: () => void;
 }) {
-  const draw = !!result?.draw;
-  const won = !draw && result?.winner === myId;
-  const outcome = draw ? "draw" : won ? "win" : "lose";
-  const title = draw ? "It's a draw" : won ? "You win!" : "You lose";
-  const emoji = draw ? "🤝" : won ? "🏆" : "😔";
+  const o = outcomeFor(result, myId);
+  const outcome = o ?? "lose";
+  const title = o === "draw" ? "It's a draw" : o === "win" ? "You win!" : "You lose";
+  const emoji = o === "draw" ? "🤝" : o === "win" ? "🏆" : "😔";
 
   return (
     <div className="gameover-backdrop" onClick={onDismiss}>

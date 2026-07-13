@@ -29,10 +29,13 @@ export interface StateMsg {
   currentPlayer: string;
   playOrder: string[];
   ended: boolean;
-  result: { winner?: string; draw?: boolean; reason?: string } | null;
+  result: { winner?: string; winners?: string[]; losers?: string[]; draw?: boolean; reason?: string } | null;
   moveCount: number;
   yourTurn: boolean;
   legalMoves?: MoveDescriptor[];
+  // Unix-ms deadline for the current turn; the gateway auto-plays a safe move if
+  // the acting player doesn't move in time. Absent when there's no timer.
+  turnDeadline?: number;
 }
 
 export interface MatchSummary {
