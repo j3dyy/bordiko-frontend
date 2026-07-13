@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchLeaderboard, listGames } from "./api.ts";
-import { gameMeta } from "./games.ts";
+import { gameMeta, friendlyName } from "./games.ts";
 import type { LeaderRow } from "./wire.ts";
 
 export function Leaderboard({ myId, initialGameId }: { myId: string; initialGameId?: string }) {
@@ -64,7 +64,7 @@ export function Leaderboard({ myId, initialGameId }: { myId: string; initialGame
                 <td className="rank">{i + 1}</td>
                 <td className="player">
                   {r.avatarUrl && <img src={r.avatarUrl} alt="" className="lb-avatar" />}
-                  {r.displayName}
+                  {friendlyName(r.displayName)}
                 </td>
                 <td className="rating">{r.rating}</td>
                 <td>{r.wins}</td>

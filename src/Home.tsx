@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createLobby, fetchCatalog, fetchLeaderboard, joinLobby, listLobbies } from "./api.ts";
-import { gameMeta, playersLabel } from "./games.ts";
+import { friendlyName, gameMeta, playersLabel } from "./games.ts";
 import { TableSetup } from "./TableSetup.tsx";
 import { seatedCount } from "./wire.ts";
 import type { CatalogGame, LeaderRow, Lobby } from "./wire.ts";
@@ -282,9 +282,9 @@ function TopPlayers({ gameId }: { gameId: string }) {
               {r.avatarUrl ? (
                 <img className="rail-avatar" src={r.avatarUrl} alt="" />
               ) : (
-                <span className="rail-avatar ph">{initial(r.displayName)}</span>
+                <span className="rail-avatar ph">{initial(friendlyName(r.displayName))}</span>
               )}
-              <span className="rail-name">{r.displayName}</span>
+              <span className="rail-name">{friendlyName(r.displayName)}</span>
               <span className="rail-rating">{r.rating}</span>
             </li>
           ))}

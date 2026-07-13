@@ -167,3 +167,14 @@ function prettify(id: string): string {
     .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
     .join(" ");
 }
+
+// A human label for a player. When a real display name is available it's used
+// as-is; an unresolved raw provider id (e.g. "google:1080499…") becomes a short
+// "Player 9343" so the UI never shows the ugly id.
+export function friendlyName(name: string | undefined | null): string {
+  const n = (name ?? "").trim();
+  if (!n) return "Player";
+  const m = /^(google|github|dev):(.+)$/.exec(n);
+  if (m) return "Player " + m[2].slice(-4);
+  return n;
+}
