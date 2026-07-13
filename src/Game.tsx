@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMatch } from "./useMatch.ts";
 import { leaveMatch } from "./api.ts";
+import { isMuted, setMuted } from "./sound.ts";
 import { HexBoard } from "./HexBoard.tsx";
 import { EightsBoard } from "./EightsBoard.tsx";
 import { JokeriBoard } from "./JokeriBoard.tsx";
@@ -86,6 +87,7 @@ export function Game({
         {state && !state.ended && <TurnTimer deadline={state.turnDeadline} yourTurn={state.yourTurn} />}
         {state?.ended && <span className="result">{resultText(state, playerId)}</span>}
         <span className="statusbar-actions">
+          <SoundToggle />
           <button className="ghost" onClick={onLeave} title="Leave the page; you can resume this match later">
             Back
           </button>
@@ -159,6 +161,25 @@ export function Game({
         </div>
       )}
     </div>
+  );
+}
+
+// Mute/unmute the game's sound effects (persisted in localStorage).
+function SoundToggle() {
+  const [muted, setMutedState] = useState(isMuted());
+  return (
+    <button
+      className="sound-toggle"
+      onClick={() => {
+        const m = !muted;
+        setMuted(m);
+        setMutedState(m);
+      }}
+      title={muted ? "Sound off — click to unmute" : "Sound on — click to mute"}
+      aria-label={muted ? "Unmute sounds" : "Mute sounds"}
+    >
+      {muted ? "🔇" : "🔊"}
+    </button>
   );
 }
 

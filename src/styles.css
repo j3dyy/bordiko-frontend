@@ -422,7 +422,9 @@ code { font-family: var(--font-mono); }
 .dot.off { background: var(--line-2); }
 .turn.you { color: var(--brand); font-weight: 600; }
 .result { color: var(--brand-700); font-family: var(--font-display); font-weight: 700; }
-.statusbar-actions { margin-left: auto; display: flex; gap: 8px; }
+.statusbar-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.sound-toggle { background: var(--panel); border: 1px solid var(--line-2); border-radius: 10px; padding: 5px 9px; font-size: 15px; line-height: 1; cursor: pointer; }
+.sound-toggle:hover { border-color: var(--brand); }
 
 /* per-turn countdown */
 .turn-timer {
@@ -451,8 +453,12 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 .resume-banner button { padding: 7px 14px; }
 
 /* profile: editable display name */
-.name-pencil { background: none; border: none; color: var(--muted); font-size: 14px; padding: 2px 7px; margin-left: 6px; cursor: pointer; vertical-align: middle; }
-.name-pencil:hover:not(:disabled) { color: var(--brand); background: var(--tint-purple); border-radius: 6px; }
+.name-edit-btn {
+  background: var(--tint-purple); border: 1px solid transparent; color: var(--brand);
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600; padding: 4px 10px; margin-left: 12px;
+  border-radius: 999px; cursor: pointer; vertical-align: middle;
+}
+.name-edit-btn:hover:not(:disabled) { border-color: var(--brand); }
 .name-edit { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .name-edit input {
   font-size: 20px; font-family: var(--font-display); font-weight: 700; padding: 5px 10px;

@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Card, SuitGlyph } from "./CardArt.tsx";
 import { TEAM_COLORS } from "./TableSetup.tsx";
+import { soundCardPlay, soundTrickWon } from "./sound.ts";
 import type { StateMsg } from "./wire.ts";
 
 interface JCard {
@@ -84,6 +85,25 @@ export function JokeriBoard({
     setPicker(null);
     setPlaying(null);
   }, [state.moveCount, G.phase, G.toAct]);
+
+  // Play a sound for each card played — a distinct pitch per seat (a "different
+  // voice" per player) — plus a chime when a trick is taken.
+  const soundRef = useRef<{ mc: number; trickLen: number; lastWinner: string | null } | null>(null);
+  useEffect(() => {
+    const cur = { mc: state.moveCount, trickLen: G.trick.length, lastWinner: G.lastTrickWinner ?? null };
+    const prev = soundRef.current;
+    soundRef.current = cur;
+    if (!prev || cur.mc === prev.mc) return; // first render / no new move
+    const seat = (p: string) => G.players.indexOf(p);
+    if (cur.lastWinner && cur.lastWinner !== prev.lastWinner && G.lastTrick.length > 0) {
+      const last = G.lastTrick[G.lastTrick.length - 1]; // the card that completed the trick
+      if (last) soundCardPlay(seat(last.player), last.player === playerId);
+      soundTrickWon();
+    } else if (cur.trickLen > prev.trickLen && G.trick.length > 0) {
+      const last = G.trick[G.trick.length - 1];
+      if (last) soundCardPlay(seat(last.player), last.player === playerId);
+    }
+  }, [state.moveCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const legal = state.yourTurn ? state.legalMoves ?? [] : [];
   const playableKeys = useMemo(() => {

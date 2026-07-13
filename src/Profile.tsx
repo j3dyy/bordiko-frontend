@@ -111,7 +111,9 @@ export function Profile({
           ) : (
             <h1 className="profile-name">
               {user.displayName}
-              <button className="name-pencil" onClick={() => { setNameInput(user.displayName); setEditing(true); }} title="Edit name" aria-label="Edit name">✎</button>
+              <button className="name-edit-btn" onClick={() => { setNameInput(user.displayName); setEditing(true); }}>
+                ✎ Edit name
+              </button>
             </h1>
           )}
           {nameErr && <div className="error">{nameErr}</div>}
