@@ -234,7 +234,13 @@ export function JokeriBoard({
             {G.phase !== "trump" && G.handSize > 0 && (
               <div className={`jk-koziri ${G.trump ? "" : "nt"}`}>
                 <span className="jk-koziri-lbl">koziri</span>
-                {G.trump ? <SuitGlyph s={G.trump} size={26} /> : <span className="jk-koziri-nt">No trump</span>}
+                {G.trump ? (
+                  <div className="jk-koziri-card">
+                    <Card r={G.trumpCard?.r ?? "A"} s={G.trump} size={66} />
+                  </div>
+                ) : (
+                  <span className="jk-koziri-nt">No trump</span>
+                )}
               </div>
             )}
 
