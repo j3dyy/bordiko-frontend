@@ -66,9 +66,9 @@ a { color: var(--brand); text-decoration: none; }
 a:hover { color: var(--brand-600); }
 h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.01em; }
 
-.app { max-width: min(1680px, 95vw); margin: 0 auto; padding: 22px clamp(16px, 3vw, 44px) 80px; }
+.app { max-width: min(1820px, 96vw); margin: 0 auto; padding: 22px clamp(16px, 3vw, 44px) 80px; }
 /* the board play screen gets more room */
-.app.in-game { max-width: min(2040px, 98vw); }
+.app.in-game { max-width: min(2400px, 99vw); padding-left: 14px; padding-right: 14px; }
 .app.center { display: flex; align-items: center; justify-content: center; min-height: 80vh; }
 
 /* --------------------------------- buttons -------------------------------- */
@@ -860,10 +860,7 @@ button.danger:hover:not(:disabled) { background: #b42318; }
   font-size: 11.5px; font-weight: 700; text-align: center; line-height: 1.25;
 }
 .jk-g-name.you { color: var(--brand); }
-.jk-g-nick {
-  display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical;
-  overflow: hidden; overflow-wrap: anywhere; line-height: 1.15; vertical-align: middle; max-width: 100%;
-}
+.jk-g-nick { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
 .jk-g-name .jk-team-dot { display: inline-block; margin-right: 3px; vertical-align: middle; }
 
 .jk-g-row td { border-bottom: 1px solid rgba(228,225,231,0.55); }
@@ -876,11 +873,12 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 .jk-g-row.live .jk-g-cell.acting .jk-cellbox { background: rgba(255,197,61,0.5); border-radius: 4px; padding: 0 3px; }
 
 /* khisht: a struck box, never a number */
+/* khisht (failed bid) — clearly flagged red so it stands out in the sheet */
+.jk-g-cell.khisht { background: rgba(216, 58, 52, 0.13); }
 .jk-khisht {
   margin-left: auto; display: inline-flex; align-items: center; justify-content: center;
-  min-width: 22px; height: 13px; padding: 0 2px; letter-spacing: 1px; color: var(--red, #d83a34);
-  border-left: 1.5px solid currentColor; border-right: 1.5px solid currentColor;
-  font-size: 10px; line-height: 1; opacity: 0.85;
+  font-family: var(--font-mono); font-weight: 700; font-size: 10.5px; line-height: 1;
+  color: #fff; background: var(--red, #d83a34); border-radius: 5px; padding: 2px 5px; letter-spacing: 0.3px;
 }
 
 /* subtotal band — the running total ÷100, once per round */
@@ -971,6 +969,38 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 .jk-lt-card { line-height: 0; border-radius: 4px; opacity: 0.85; }
 .jk-lt-card.won { outline: 2px solid var(--teal); outline-offset: 1px; border-radius: 5px; opacity: 1; }
 
+/* koziri (trump) shown on the felt */
+.jk-koziri {
+  position: absolute; top: 12px; left: 16px; z-index: 3; display: flex; align-items: center; gap: 7px;
+  background: rgba(255, 255, 255, 0.94); border-radius: 13px; padding: 5px 11px; box-shadow: 0 2px 9px rgba(0, 0, 0, 0.28);
+}
+.jk-koziri-lbl { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); font-weight: 600; }
+.jk-koziri-nt { font-family: var(--font-mono); font-weight: 700; font-size: 11px; color: var(--muted); }
+
+/* a taken trick sweeps toward the winner's side */
+.jk-collect { position: absolute; left: 50%; top: 50%; z-index: 4; pointer-events: none; animation: 0.85s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.jk-collect.to-north { animation-name: coll-n; }
+.jk-collect.to-south { animation-name: coll-s; }
+.jk-collect.to-west { animation-name: coll-w; }
+.jk-collect.to-east { animation-name: coll-e; }
+.jk-collect-card { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%) rotate(calc((var(--i) - 1.5) * 9deg)); filter: drop-shadow(0 5px 9px rgba(0, 0, 0, 0.45)); }
+@keyframes coll-n { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 22% { transform: translate(0, 0) scale(1.06); opacity: 1; } 100% { transform: translate(0, -180px) scale(0.45); opacity: 0; } }
+@keyframes coll-s { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 22% { transform: translate(0, 0) scale(1.06); opacity: 1; } 100% { transform: translate(0, 180px) scale(0.45); opacity: 0; } }
+@keyframes coll-w { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 22% { transform: translate(0, 0) scale(1.06); opacity: 1; } 100% { transform: translate(-340px, 0) scale(0.45); opacity: 0; } }
+@keyframes coll-e { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 22% { transform: translate(0, 0) scale(1.06); opacity: 1; } 100% { transform: translate(340px, 0) scale(0.45); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .jk-collect { animation-duration: 0.4s; } }
+
+/* seat "bid / took" scoreboard */
+.jk-tally { display: flex; gap: 5px; margin-top: 2px; }
+.jk-tally-cell { display: flex; flex-direction: column; align-items: center; min-width: 30px; background: var(--panel); border-radius: 8px; padding: 2px 7px; }
+.jk-tally-cell b { font-family: var(--font-display); font-weight: 800; font-size: 15px; line-height: 1.05; color: var(--text); }
+.jk-tally-cell b.pas { font-size: 12px; color: var(--muted); }
+.jk-tally-cell i { font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted-2); font-style: normal; }
+.jk-tally-cell.took.made { background: var(--tint-teal); }
+.jk-tally-cell.took.made b { color: var(--teal-700); }
+.jk-tally-cell.took.over { background: rgba(255, 106, 61, 0.14); }
+.jk-tally-cell.took.over b { color: #d1521f; }
+
 .jk-minifan { position: relative; display: flex; }
 .jk-minicard { margin-left: -26px; transform: rotate(calc((var(--i) - 2) * 4deg)); }
 .jk-minicard:first-child { margin-left: 0; }
@@ -1008,8 +1038,11 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 @media (max-width: 900px) { .jk-mybid { position: static; margin: 0 auto 8px; flex-direction: row; gap: 8px; align-items: baseline; } }
 .jk-slot { transform: rotate(var(--rot)); transform-origin: bottom center; transition: transform 0.14s ease; cursor: default; }
 .jk-slot.playable { cursor: pointer; }
-.jk-slot.playable:hover { transform: rotate(var(--rot)) translateY(-16px); z-index: 50 !important; }
+/* lift whichever card the mouse is on (so you see it clearly); playable lifts more */
+.jk-slot:hover { transform: rotate(var(--rot)) translateY(-16px) scale(1.03); z-index: 60 !important; }
+.jk-slot.playable:hover { transform: rotate(var(--rot)) translateY(-26px) scale(1.06); }
 .jk-slot.dim { opacity: 0.5; filter: grayscale(0.35); }
+.jk-slot.dim:hover { opacity: 0.78; filter: grayscale(0.1); }
 .jk-lift { transition: transform 0.2s ease, opacity 0.2s ease; }
 .jk-lift.playing { transform: translateY(-40px) scale(1.04); opacity: 0; }
 

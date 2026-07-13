@@ -51,6 +51,18 @@ const SUITS = ["S", "H", "D", "C"];
 const isJoker = (c: JCard) => c.r === "6" && (c.s === "S" || c.s === "C");
 const key = (c: JCard) => c.r + c.s;
 
+// Hand sort: group by suit (alternating colours) then low→high; Jokers last.
+const SUIT_ORD: Record<string, number> = { S: 0, H: 1, C: 2, D: 3 };
+const RANK_ORD: Record<string, number> = { "6": 0, "7": 1, "8": 2, "9": 3, "10": 4, J: 5, Q: 6, K: 7, A: 8 };
+function sortHand(hand: JCard[]): JCard[] {
+  return [...hand].sort((a, b) => {
+    const aj = isJoker(a), bj = isJoker(b);
+    if (aj !== bj) return aj ? 1 : -1; // jokers to the right
+    if (aj && bj) return a.s === "S" ? -1 : 1;
+    return SUIT_ORD[a.s] - SUIT_ORD[b.s] || RANK_ORD[a.r] - RANK_ORD[b.r];
+  });
+}
+
 // player ids are like "dev:alice" or an OAuth id — show a friendly-ish label.
 function shortName(id: string): string {
   const base = id.includes(":") ? id.slice(id.indexOf(":") + 1) : id;
@@ -80,6 +92,8 @@ export function JokeriBoard({
   const G = state.G as JokeriView;
   const [picker, setPicker] = useState<JCard | null>(null); // a Joker awaiting high/low (+ suit)
   const [playing, setPlaying] = useState<string | null>(null);
+  const [collect, setCollect] = useState<{ cards: TrickCard[]; dir: string; k: number } | null>(null);
+  const collectRef = useRef<{ winner: string | null; k: number }>({ winner: null, k: 0 });
 
   useEffect(() => {
     setPicker(null);
@@ -133,6 +147,19 @@ export function JokeriBoard({
   const seatOf = (dir: string) => G.players.find((p) => compassOf(p) === dir);
   // Prefer the player's display name (from the gateway) over the raw id.
   const nameOf = (id: string) => state.names?.[id] ?? shortName(id);
+
+  // When a trick is taken, sweep its cards toward the winner's side of the table.
+  useEffect(() => {
+    const w = G.lastTrickWinner ?? null;
+    if (w && w !== collectRef.current.winner && G.lastTrick.length > 0) {
+      const k = ++collectRef.current.k;
+      collectRef.current.winner = w;
+      setCollect({ cards: G.lastTrick, dir: compassOf(w), k });
+      const t = setTimeout(() => setCollect((c) => (c && c.k === k ? null : c)), 900);
+      return () => clearTimeout(t);
+    }
+    if (!w) collectRef.current.winner = null;
+  }, [G.lastTrickWinner, state.moveCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ------------------------------- actions ------------------------------- */
   function clickCard(c: JCard) {
@@ -196,6 +223,14 @@ export function JokeriBoard({
           {/* the felt: each player's played card lands in front of their seat and
               the four converge in the middle as the trick fills. */}
           <div className="jk-felt">
+            {/* koziri (trump) for the deal, shown on the table */}
+            {G.phase !== "trump" && G.handSize > 0 && (
+              <div className={`jk-koziri ${G.trump ? "" : "nt"}`}>
+                <span className="jk-koziri-lbl">koziri</span>
+                {G.trump ? <SuitGlyph s={G.trump} size={26} /> : <span className="jk-koziri-nt">No trump</span>}
+              </div>
+            )}
+
             {(["north", "east", "south", "west"] as const).map((dir) => {
               const t = G.trick.find((tc) => compassOf(tc.player) === dir);
               return (
@@ -204,7 +239,19 @@ export function JokeriBoard({
                 </div>
               );
             })}
-            {G.trick.length === 0 && (
+
+            {/* a taken trick sweeps toward the winner's side */}
+            {collect && (
+              <div key={collect.k} className={`jk-collect to-${collect.dir}`}>
+                {collect.cards.map((t, i) => (
+                  <div key={i} className="jk-collect-card" style={{ ["--i" as string]: i, zIndex: i }}>
+                    <PlayCard c={t.card} mode={t.jokerMode} size={64} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {G.trick.length === 0 && !collect && (
               <div className="jk-felt-empty">
                 {G.phase === "play"
                   ? `${G.leader === me ? "You lead" : `${nameOf(G.leader)} leads`}`
@@ -288,14 +335,14 @@ export function JokeriBoard({
           {G.hand.length === 0 ? (
             <span className="hint">No cards this deal.</span>
           ) : (
-            G.hand.map((c, i) => {
+            sortHand(G.hand).map((c, i, arr) => {
               const k = key(c);
               const canPlay = state.yourTurn && G.phase === "play" && playableKeys.has(k);
-              const n = G.hand.length;
+              const n = arr.length;
               const rot = (i - (n - 1) / 2) * Math.min(5, 46 / Math.max(n, 1));
               return (
                 <div
-                  key={k + i}
+                  key={k}
                   className={`jk-slot ${canPlay ? "playable" : ""} ${state.yourTurn && G.phase === "play" && !canPlay ? "dim" : ""}`}
                   style={{ ["--rot" as string]: `${rot}deg`, zIndex: i, marginLeft: i ? -34 : 0 }}
                   onClick={() => clickCard(c)}
@@ -366,6 +413,29 @@ function PlayCard({ c, size = 92, mode }: { c: JCard; size?: number; mode?: "hig
 // One player's place at the table: name, team colour, bid/took, dealer badge,
 // an acting pulse, and (for opponents) their face-down hand. My own seat is the
 // compact marker at the bottom — my real hand fans out below the table.
+// A compact "bid / took" scoreboard for a seat — the take cell turns green when
+// it matches the call, amber when it's overshot.
+function Tally({ bid, took, phase }: { bid: number | null; took: number; phase: "trump" | "bid" | "play" | "done" }) {
+  const bidLabel = bid == null ? "—" : bid === 0 ? "pas" : String(bid);
+  const made = bid != null && bid >= 1 && took === bid;
+  const over = bid != null && ((bid >= 1 && took > bid) || (bid === 0 && took > 0));
+  const showTook = phase === "play" || phase === "done" || took > 0;
+  return (
+    <div className="jk-tally">
+      <span className="jk-tally-cell">
+        <b className={bid === 0 ? "pas" : ""}>{bidLabel}</b>
+        <i>bid</i>
+      </span>
+      {showTook && (
+        <span className={`jk-tally-cell took ${made ? "made" : ""} ${over ? "over" : ""}`}>
+          <b>{took}</b>
+          <i>took</i>
+        </span>
+      )}
+    </div>
+  );
+}
+
 function TableSeat({
   G,
   p,
@@ -396,7 +466,7 @@ function TableSeat({
           {p === G.dealer && <span className="jk-badge" title="dealer">D</span>}
           {acting && <span className="jk-turn-dot" />}
         </div>
-        <div className="jk-seat-sub">{fmtBid(G.bids[p])} · took {G.taken[p] ?? 0}</div>
+        <Tally bid={G.bids[p] ?? null} took={G.taken[p] ?? 0} phase={G.phase} />
       </div>
     </div>
   );
@@ -583,12 +653,12 @@ function ScoreGrid({
 function ScoreCell({ bid, pts, taken }: { bid: number; pts: number; taken: number }) {
   const khisht = isKhisht(bid, taken);
   return (
-    <td className="jk-g-cell">
+    <td className={`jk-g-cell ${khisht ? "khisht" : ""}`}>
       <span className="jk-cellbox">
         <span className="jk-bidnum">{bid === 0 ? "–" : bid}</span>
         {khisht ? (
           <span className="jk-khisht" title={`khisht ${pts}`}>
-            ‒‒
+            ✕{Math.abs(pts)}
           </span>
         ) : (
           <span className="jk-pts">{pts}</span>
