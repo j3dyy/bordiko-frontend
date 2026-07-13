@@ -13,12 +13,14 @@ export function GameDetail({
   onWaiting,
   onGame,
   onBack,
+  onBlocked,
 }: {
   gameId: string;
   myId: string;
   onWaiting: (lobby: Lobby) => void;
   onGame: (matchId: string, gameId: string) => void;
   onBack: () => void;
+  onBlocked?: () => void;
 }) {
   const m = gameMeta(gameId);
   const [game, setGame] = useState<CatalogGame | null>(null);
@@ -55,8 +57,12 @@ export function GameDetail({
       onWaiting(lobby);
     } catch (e) {
       const active = (e as { active?: { matchId: string; gameId: string } }).active;
-      if (active) onGame(active.matchId, active.gameId);
-      else setErr(String((e as Error).message ?? e));
+      if (active) {
+        setErr(`You're already in a game of ${gameMeta(active.gameId).name} — resume or leave it from the banner at the top.`);
+        onBlocked?.();
+      } else {
+        setErr(String((e as Error).message ?? e));
+      }
     } finally {
       setBusy(false);
     }

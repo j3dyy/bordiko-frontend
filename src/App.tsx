@@ -7,6 +7,8 @@ import { Game } from "./Game.tsx";
 import { GameDetail } from "./GameDetail.tsx";
 import { Profile } from "./Profile.tsx";
 import { Leaderboard } from "./Leaderboard.tsx";
+import { fetchActive, leaveMatch, type ActiveMatch } from "./api.ts";
+import { gameMeta } from "./games.ts";
 import type { Lobby } from "./wire.ts";
 
 
@@ -46,6 +48,8 @@ function pathToView(pathname: string): View {
 export function App() {
   const { user, loading, logout } = useAuth();
   const [view, setView] = useState<View>(() => pathToView(window.location.pathname));
+  const [active, setActive] = useState<ActiveMatch | null>(null);
+  const [leavingActive, setLeavingActive] = useState(false);
 
   useEffect(() => {
     // Back/forward buttons.
@@ -53,6 +57,16 @@ export function App() {
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
+
+  // Track the user's unfinished match so we can offer to resume (or leave) it —
+  // on load, after a reconnect, and whenever they step back out to a menu.
+  const refreshActive = useCallback(async () => {
+    const a = await fetchActive();
+    setActive(a.active && a.matchId ? a : null);
+  }, []);
+  useEffect(() => {
+    if (user && view.screen !== "game") void refreshActive();
+  }, [user, view.screen, refreshActive]);
 
   const navigate = useCallback((v: View) => {
     const path = viewToPath(v);
@@ -113,11 +127,31 @@ export function App() {
         </div>
       </header>
 
+      {active && !(view.screen === "game" && view.matchId === active.matchId) && (
+        <ResumeBanner
+          active={active}
+          leaving={leavingActive}
+          onResume={() => navigate({ screen: "game", matchId: active.matchId!, gameId: active.gameId! })}
+          onLeave={async () => {
+            setLeavingActive(true);
+            try {
+              await leaveMatch(active.matchId!);
+              await refreshActive();
+            } catch {
+              /* game-host may still be redeploying — leave the banner so they can retry */
+            } finally {
+              setLeavingActive(false);
+            }
+          }}
+        />
+      )}
+
       {view.screen === "home" && (
         <Home
           onWaiting={(lobby) => navigate({ screen: "waiting", lobbyId: lobby.id })}
           onGame={(matchId, gameId) => navigate({ screen: "game", matchId, gameId })}
           onOpen={(gameId) => navigate({ screen: "detail", gameId })}
+          onBlocked={refreshActive}
         />
       )}
 
@@ -128,6 +162,7 @@ export function App() {
           onWaiting={(lobby) => navigate({ screen: "waiting", lobbyId: lobby.id })}
           onGame={(matchId, gameId) => navigate({ screen: "game", matchId, gameId })}
           onBack={goHome}
+          onBlocked={refreshActive}
         />
       )}
 
@@ -155,6 +190,34 @@ export function App() {
       )}
 
       {view.screen === "leaderboard" && <Leaderboard myId={user.id} initialGameId={view.gameId} />}
+    </div>
+  );
+}
+
+// Shown whenever the user has an unfinished match they're not currently viewing:
+// one game at a time, so this is how they get back in — or bow out.
+function ResumeBanner({
+  active,
+  leaving,
+  onResume,
+  onLeave,
+}: {
+  active: ActiveMatch;
+  leaving: boolean;
+  onResume: () => void;
+  onLeave: () => void;
+}) {
+  const m = gameMeta(active.gameId ?? "");
+  return (
+    <div className="resume-banner">
+      <span className="resume-emoji" aria-hidden>{m.emoji}</span>
+      <span className="resume-text">
+        You have a game of <strong>{m.name}</strong> in progress — you can only play one at a time.
+      </span>
+      <button onClick={onResume}>Resume</button>
+      <button className="ghost danger" onClick={onLeave} disabled={leaving}>
+        {leaving ? "Leaving…" : "Leave"}
+      </button>
     </div>
   );
 }

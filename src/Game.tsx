@@ -45,22 +45,28 @@ export function Game({
   const [dismissed, setDismissed] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [leaveErr, setLeaveErr] = useState("");
 
   // Reset the "dismissed game-over" flag when we enter a different match.
   useEffect(() => {
     setDismissed(false);
     setConfirmLeave(false);
+    setLeaveErr("");
   }, [matchId]);
 
-  // Forfeit and quit: end the match (our team loses) so we're freed, then leave.
+  // Forfeit and quit: end the match (our team loses) so we're freed. Only leave
+  // the page once the server confirms the match actually ended — otherwise show
+  // the error and stay, so a failed leave never silently traps us in the match.
   async function forfeit() {
     setLeaving(true);
+    setLeaveErr("");
     try {
       await leaveMatch(matchId);
-    } catch {
-      /* best-effort — leave the page regardless so we're never trapped here */
+      onLeave();
+    } catch (e) {
+      setLeaveErr((e as Error).message || "Could not leave the game — try again.");
+      setLeaving(false);
     }
-    onLeave();
   }
 
   return (
@@ -84,7 +90,7 @@ export function Game({
             Back
           </button>
           {state && !state.ended && (
-            <button className="ghost danger" onClick={() => setConfirmLeave(true)} disabled={leaving}>
+            <button className="ghost danger" onClick={() => { setLeaveErr(""); setConfirmLeave(true); }} disabled={leaving}>
               {leaving ? "Leaving…" : "Leave game"}
             </button>
           )}
@@ -140,6 +146,7 @@ export function Game({
               This match can't continue without you, so your team forfeits and it counts as a loss. Everyone will be
               freed to start a new game. To just step away and resume later, use <strong>Back</strong> instead.
             </p>
+            {leaveErr && <p className="error">{leaveErr}</p>}
             <div className="ts-actions">
               <button className="ghost" onClick={() => setConfirmLeave(false)} disabled={leaving}>
                 Keep playing

@@ -166,10 +166,36 @@ export async function cancelLobby(id: string): Promise<void> {
 
 /* -------------------------------- match ----------------------------------- */
 
+// The signed-in user's active (unfinished) match, if any — used to offer
+// "resume your game" on load and after a reconnect.
+export interface ActiveMatch {
+  active: boolean;
+  matchId?: string;
+  gameId?: string;
+}
+export async function fetchActive(): Promise<ActiveMatch> {
+  try {
+    return await json<ActiveMatch>(await req("/api/active"), "active");
+  } catch {
+    return { active: false };
+  }
+}
+
 // Leave an in-progress match: the caller's team forfeits so the others aren't
-// stuck and everyone is freed to start a new game.
+// stuck and everyone is freed to start a new game. Throws if the server didn't
+// actually end the match, so the UI never pretends a failed leave succeeded.
 export async function leaveMatch(matchId: string): Promise<void> {
-  await req(`/api/matches/${encodeURIComponent(matchId)}/leave`, { method: "POST" });
+  const res = await req(`/api/matches/${encodeURIComponent(matchId)}/leave`, { method: "POST" });
+  if (!res.ok) {
+    let msg = `couldn't leave (${res.status})`;
+    try {
+      const b = await res.json();
+      if (b?.error) msg = b.message ? `${b.error}: ${b.message}` : b.error;
+    } catch {
+      /* non-JSON body */
+    }
+    throw new Error(msg);
+  }
 }
 
 /* ----------------------------- leaderboard -------------------------------- */

@@ -102,8 +102,13 @@ export function JokeriBoard({
     const idx = G.teams.findIndex((t) => t.includes(p));
     return idx >= 0 ? TEAM_COLORS[idx % TEAM_COLORS.length] : "";
   };
-  const others = G.players.filter((p) => p !== me);
-  const trickCardOf = (p: string) => G.trick.find((t) => t.player === p);
+  // Seat everyone around the table relative to me: I'm at the bottom (south), my
+  // partner sits across (north), opponents left (west) and right (east). This is
+  // how the four sit face to face at a real Jokeri table.
+  const DIRS = ["south", "west", "north", "east"] as const;
+  const myIdx = G.players.indexOf(me);
+  const compassOf = (p: string) => DIRS[(((G.players.indexOf(p) - myIdx) % 4) + 4) % 4];
+  const seatOf = (dir: string) => G.players.find((p) => compassOf(p) === dir);
 
   /* ------------------------------- actions ------------------------------- */
   function clickCard(c: JCard) {
@@ -148,50 +153,49 @@ export function JokeriBoard({
       {/* ---------------- left scoresheet "paper" (traditional grid) ---------------- */}
       <ScoreGrid G={G} me={me} ended={!!state.ended} roundLabel={roundLabel} teamColor={teamColor} />
 
-      {/* ---------------- the desk ---------------- */}
+      {/* ---------------- the table: four seats facing each other ---------------- */}
       <div className="jk-table">
-        <div className="jk-opponents">
-          {others.map((p) => {
-            const tc = teamColor(p);
-            const played = !!trickCardOf(p);
-            return (
-              <div key={p} className={`jk-opp ${p === G.toAct ? "acting" : ""} ${played ? "played" : ""}`}>
-                <div className="jk-opp-head">
-                  {tc && <span className="jk-team-dot" style={{ background: tc }} />}
-                  <span className="jk-opp-name">{shortName(p)}</span>
-                  <span className="jk-opp-bid">{fmtBid(G.bids[p])} · took {G.taken[p] ?? 0}</span>
-                </div>
-                <div className="jk-opp-cards">
-                  <MiniFan n={G.handCounts[p] ?? 0} />
-                  {played && <span className="jk-opp-played">played ✓</span>}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <div className="jk-felt-grid">
+          {(["north", "west", "east", "south"] as const).map((dir) => (
+            <TableSeat
+              key={dir}
+              dir={dir}
+              p={seatOf(dir)}
+              me={me}
+              G={G}
+              acting={(() => { const p = seatOf(dir); return !!p && p === G.toAct && !state.ended; })()}
+              teamColor={teamColor}
+            />
+          ))}
 
-        {/* center: the trick fans onto the desk like a flower — every card so far
-            stays visible, newest on top. */}
-        <div className="jk-desk">
-          {G.trick.length === 0 ? (
-            <div className="jk-desk-empty">
-              {G.phase === "play" ? `${shortName(G.leader)} leads` : "—"}
-            </div>
-          ) : (
-            <div className="jk-trick" style={{ ["--n" as string]: G.trick.length }}>
-              {G.trick.map((t, i) => (
-                <div key={t.player} className="jk-trick-card" style={{ ["--i" as string]: i, zIndex: i + 1 }}>
-                  <span className="jk-trick-who">{t.player === me ? "You" : shortName(t.player)}</span>
-                  <PlayCard c={t.card} mode={t.jokerMode} size={96} />
+          {/* the felt: each player's played card lands in front of their seat and
+              the four converge in the middle as the trick fills. */}
+          <div className="jk-felt">
+            {(["north", "east", "south", "west"] as const).map((dir) => {
+              const t = G.trick.find((tc) => compassOf(tc.player) === dir);
+              return (
+                <div key={dir} className={`jk-play ${dir} ${t ? "on" : ""}`}>
+                  {t && <PlayCard c={t.card} mode={t.jokerMode} size={70} />}
                 </div>
-              ))}
-            </div>
-          )}
-          {G.calledSuit && G.phase === "play" && (
-            <div className="jk-called">
-              led <SuitGlyph s={G.calledSuit} size={20} />
-            </div>
-          )}
+              );
+            })}
+            {G.trick.length === 0 && (
+              <div className="jk-felt-empty">
+                {G.phase === "play"
+                  ? `${G.leader === me ? "You lead" : `${shortName(G.leader)} leads`}`
+                  : G.phase === "bid"
+                    ? "bidding"
+                    : G.phase === "trump"
+                      ? "choosing trump"
+                      : "—"}
+              </div>
+            )}
+            {G.calledSuit && G.phase === "play" && (
+              <div className="jk-called">
+                led <SuitGlyph s={G.calledSuit} size={18} />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* contextual action panels */}
@@ -301,6 +305,43 @@ function PlayCard({ c, size = 92, mode }: { c: JCard; size?: number; mode?: "hig
     <div className="jk-card" style={{ position: "relative" }}>
       {joker ? <Card joker size={size} /> : <Card r={c.r} s={c.s} size={size} />}
       {mode && <span className={`jk-mode-tag ${mode}`}>{mode === "high" ? "▲" : "▼"}</span>}
+    </div>
+  );
+}
+
+// One player's place at the table: name, team colour, bid/took, dealer badge,
+// an acting pulse, and (for opponents) their face-down hand. My own seat is the
+// compact marker at the bottom — my real hand fans out below the table.
+function TableSeat({
+  G,
+  p,
+  me,
+  dir,
+  acting,
+  teamColor,
+}: {
+  G: JokeriView;
+  p: string | undefined;
+  me: string;
+  dir: "north" | "west" | "east" | "south";
+  acting: boolean;
+  teamColor: (p: string) => string;
+}) {
+  if (!p) return <div className={`jk-seat ${dir} empty`} />;
+  const isMe = p === me;
+  const tc = teamColor(p);
+  return (
+    <div className={`jk-seat ${dir} ${isMe ? "me" : ""} ${acting ? "acting" : ""}`}>
+      {!isMe && <MiniFan n={G.handCounts[p] ?? 0} />}
+      <div className="jk-seat-plate">
+        <div className="jk-seat-head">
+          {tc && <span className="jk-team-dot" style={{ background: tc }} />}
+          <span className="jk-seat-name">{isMe ? "You" : shortName(p)}</span>
+          {p === G.dealer && <span className="jk-badge" title="dealer">D</span>}
+          {acting && <span className="jk-turn-dot" />}
+        </div>
+        <div className="jk-seat-sub">{fmtBid(G.bids[p])} · took {G.taken[p] ?? 0}</div>
+      </div>
     </div>
   );
 }

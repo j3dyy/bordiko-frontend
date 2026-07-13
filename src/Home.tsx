@@ -9,10 +9,12 @@ export function Home({
   onWaiting,
   onGame,
   onOpen,
+  onBlocked,
 }: {
   onWaiting: (lobby: Lobby) => void;
   onGame: (matchId: string, gameId: string) => void;
   onOpen: (gameId: string) => void;
+  onBlocked?: () => void;
 }) {
   const [catalog, setCatalog] = useState<CatalogGame[]>([]);
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
@@ -44,10 +46,15 @@ export function Home({
     };
   }, [refresh]);
 
+  // The gateway blocks a new/join table while you're still in a match. Don't
+  // silently drop into that (possibly unrelated) game — surface it and let the
+  // top banner offer Resume / Leave.
   function resumeIfActive(e: unknown): boolean {
     const active = (e as { active?: { matchId: string; gameId: string } }).active;
     if (active) {
-      onGame(active.matchId, active.gameId);
+      const g = gameMeta(active.gameId);
+      setErr(`You're already in a game of ${g.name} — resume or leave it from the banner at the top.`);
+      onBlocked?.();
       return true;
     }
     return false;
