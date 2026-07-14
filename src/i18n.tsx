@@ -425,7 +425,7 @@ const ka: Dict = {
   // jokeri board
   "jk.chooseTrump": "აირჩიე კოზირი ამ დარიგებისთვის — ან უკოზირო.",
   "jk.choosingTrump": "{name} ირჩევს კოზირს…",
-  "jk.declareBid": "თქვი, რამდენ ხელს აიღებ (0 = პასი).",
+  "jk.declareBid": "თქვი, რამდენს აიღებ (0 = პასი).",
   "jk.bidding": "{name} აცხადებს…",
   "jk.yourLeadPlay": "შენი სვლაა — ითამაშე ნებისმიერი ქაღალდი.",
   "jk.followSuit": "მიჰყევი {suit}-ს თუ შეგიძლია, ან ითამაშე ჯოკერი.",
