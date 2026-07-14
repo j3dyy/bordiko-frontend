@@ -10,7 +10,7 @@ export interface GameMeta {
   blurb: string;
   minPlayers: number;
   maxPlayers: number;
-  renderer: "hive" | "eights" | "jokeri" | "auto";
+  renderer: "hive" | "eights" | "jokeri" | "auto" | "sandbox";
   accent: string;
   emoji: string;
   category: string;
@@ -129,7 +129,7 @@ const KNOWN: Record<string, Omit<GameMeta, "id">> = {
     blurb: "The classic. Three in a row.",
     minPlayers: 2,
     maxPlayers: 2,
-    renderer: "auto",
+    renderer: "sandbox", // ships its own custom UI bundle (Option 2 demo)
     accent: "#FFC53D",
     emoji: "⭕",
     category: "Abstract",

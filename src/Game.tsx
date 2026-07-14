@@ -24,6 +24,7 @@ import { EightsBoard } from "./EightsBoard.tsx";
 import { JokeriBoard } from "./JokeriBoard.tsx";
 import { AutoBoard } from "./AutoBoard.tsx";
 import { SchemaBoard } from "./SchemaBoard.tsx";
+import { SandboxBoard } from "./SandboxBoard.tsx";
 import { RateBar } from "./RateBar.tsx";
 import { gameMeta } from "./games.ts";
 import type { StateMsg } from "./wire.ts";
@@ -137,6 +138,8 @@ export function Game({
               <EightsBoard state={state} playerId={playerId} onMove={sendMove} />
             ) : meta.renderer === "jokeri" ? (
               <JokeriBoard state={state} playerId={playerId} onMove={sendMove} />
+            ) : meta.renderer === "sandbox" ? (
+              <SandboxBoard state={state} playerId={playerId} gameId={gameId} onMove={sendMove} />
             ) : state.G?.board ? (
               <SchemaBoard state={state} playerId={playerId} gameId={gameId} onMove={sendMove} />
             ) : (

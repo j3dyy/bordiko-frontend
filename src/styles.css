@@ -1219,3 +1219,9 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 .sb-pick { padding: 8px 14px; border-radius: 10px; background: var(--panel); color: var(--text); border: 1px solid var(--line); }
 .sb-pick.on { background: var(--accent); color: #fff; border-color: var(--accent); }
 .sb-pick-submit { padding: 10px 20px; }
+
+/* ---------------- SandboxBoard: a game's own UI in a locked-down iframe ------ */
+.sandbox-frame {
+  width: 100%; height: min(72vh, 680px); border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--panel); box-shadow: var(--shadow-card); display: block;
+}
