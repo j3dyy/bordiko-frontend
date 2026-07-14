@@ -3,6 +3,7 @@ import { Card, SuitGlyph } from "./CardArt.tsx";
 import { TEAM_COLORS } from "./TableSetup.tsx";
 import { soundCardPlay, soundTrickWon } from "./sound.ts";
 import type { StateMsg } from "./wire.ts";
+import { useT } from "./i18n.tsx";
 
 interface JCard {
   r: string;
@@ -70,11 +71,11 @@ function shortName(id: string): string {
   return base.length <= 12 ? base.charAt(0).toUpperCase() + base.slice(1) : base.slice(0, 6) + "…";
 }
 
-function roundOf(handIndex: number): { round: number; label: string } {
-  if (handIndex < 8) return { round: 1, label: `Round 1 · deal ${handIndex + 1}/8` };
-  if (handIndex < 12) return { round: 2, label: `Round 2 · deal ${handIndex - 7}/4` };
-  if (handIndex < 20) return { round: 3, label: `Round 3 · deal ${handIndex - 11}/8` };
-  return { round: 4, label: `Round 4 · deal ${handIndex - 19}/4` };
+function roundOf(handIndex: number): { round: number; deal: number; total: number } {
+  if (handIndex < 8) return { round: 1, deal: handIndex + 1, total: 8 };
+  if (handIndex < 12) return { round: 2, deal: handIndex - 7, total: 4 };
+  if (handIndex < 20) return { round: 3, deal: handIndex - 11, total: 8 };
+  return { round: 4, deal: handIndex - 19, total: 4 };
 }
 
 // A card-table renderer for Jokeri: opponents around the desk with their bid /
@@ -90,6 +91,7 @@ export function JokeriBoard({
   playerId: string;
   onMove: (type: string, payload?: Record<string, unknown>) => void;
 }) {
+  const { t } = useT();
   const G = state.G as JokeriView;
   const [picker, setPicker] = useState<JCard | null>(null); // a Joker awaiting high/low (+ suit)
   const [playing, setPlaying] = useState<string | null>(null);
@@ -185,8 +187,9 @@ export function JokeriBoard({
     setPicker(null);
   }
 
-  const { label: roundLabel } = roundOf(G.handIndex);
-  const trumpLabel = G.trump ? null : "No trump";
+  const rnd = roundOf(G.handIndex);
+  const roundLabel = t("jk.round", { r: rnd.round, n: rnd.deal, total: rnd.total });
+  const trumpLabel = G.trump ? null : t("jk.noTrump");
 
   // Between tricks (the live trick is empty and the sweep has finished) the just-
   // completed trick RESTS in place on the felt — dimmed, the winner ringed — so
@@ -195,22 +198,22 @@ export function JokeriBoard({
   const feltCards: TrickCard[] = G.trick.length > 0 ? G.trick : restingLast ? G.lastTrick : [];
 
   const hint = state.ended
-    ? "Match over."
+    ? t("jk.matchOver")
     : G.phase === "trump"
       ? state.yourTurn
-        ? "Choose the trump suit for this deal — or no-trump."
-        : `${nameOf(G.toAct)} is choosing the trump…`
+        ? t("jk.chooseTrump")
+        : t("jk.choosingTrump", { name: nameOf(G.toAct) })
       : G.phase === "bid"
         ? state.yourTurn
-          ? "Declare how many tricks you'll take (0 to pass)."
-          : `${nameOf(G.toAct)} is bidding…`
+          ? t("jk.declareBid")
+          : t("jk.bidding", { name: nameOf(G.toAct) })
         : state.yourTurn
           ? isLead
-            ? "Your lead — play any card."
+            ? t("jk.yourLeadPlay")
             : G.calledSuit
-              ? `Follow ${suitName(G.calledSuit)} if you can, or play a Joker.`
-              : "Play a card."
-          : `Waiting for ${nameOf(G.toAct)}…`;
+              ? t("jk.followSuit", { suit: t(`suit.${G.calledSuit}`) })
+              : t("jk.playCard")
+          : t("jk.waitingFor", { name: nameOf(G.toAct) });
 
   return (
     <div className="jokeri">
@@ -239,13 +242,13 @@ export function JokeriBoard({
             {/* koziri (trump) for the deal, shown on the table */}
             {G.phase !== "trump" && G.handSize > 0 && (
               <div className={`jk-koziri ${G.trump ? "" : "nt"}`}>
-                <span className="jk-koziri-lbl">koziri</span>
+                <span className="jk-koziri-lbl">{t("jk.koziri")}</span>
                 {G.trump ? (
                   <div className="jk-koziri-card">
                     <Card r={G.trumpCard?.r ?? "A"} s={G.trump} size={66} />
                   </div>
                 ) : (
-                  <span className="jk-koziri-nt">No trump</span>
+                  <span className="jk-koziri-nt">{t("jk.noTrump")}</span>
                 )}
               </div>
             )}
@@ -259,12 +262,12 @@ export function JokeriBoard({
                   ) : bidGap > 0 ? (
                     <><b>შეტენვა</b> −{bidGap}</>
                   ) : (
-                    <b>full</b>
+                    <b>{t("jk.full")}</b>
                   )
                 ) : (
                   <>
-                    said <b>{bidTotal}</b>/{G.handSize}
-                    {bidGap > 0 && <span className="jk-fill"> · fill {bidGap}</span>}
+                    {t("jk.said")} <b>{bidTotal}</b>/{G.handSize}
+                    {bidGap > 0 && <span className="jk-fill"> · {t("jk.fill", { gap: bidGap })}</span>}
                   </>
                 )}
               </div>
@@ -295,17 +298,19 @@ export function JokeriBoard({
             {G.trick.length === 0 && !collect && !restingLast && (
               <div className="jk-felt-empty">
                 {G.phase === "play"
-                  ? `${G.leader === me ? "You lead" : `${nameOf(G.leader)} leads`}`
+                  ? G.leader === me
+                    ? t("jk.youLead")
+                    : t("jk.leads", { name: nameOf(G.leader) })
                   : G.phase === "bid"
-                    ? "bidding"
+                    ? t("jk.biddingShort")
                     : G.phase === "trump"
-                      ? "choosing trump"
+                      ? t("jk.choosingTrumpShort")
                       : "—"}
               </div>
             )}
             {/* whose lead it is now, shown under the resting trick */}
             {restingLast && G.phase === "play" && (
-              <div className="jk-felt-lead">{G.leader === me ? "Your lead" : `${nameOf(G.leader)} leads`}</div>
+              <div className="jk-felt-lead">{G.leader === me ? t("jk.yourLead") : t("jk.leads", { name: nameOf(G.leader) })}</div>
             )}
             {G.calledSuit && G.phase === "play" && (() => {
               const lead = G.trick.find((t) => t.player === G.leader);
@@ -313,9 +318,9 @@ export function JokeriBoard({
               return (
                 <div className={`jk-called ${jokerLed ? "joker" : ""}`}>
                   {jokerLed ? (
-                    <>🃏 {lead.jokerMode === "high" ? "high" : "low"} · calls <SuitGlyph s={G.calledSuit} size={18} /></>
+                    <>🃏 {lead.jokerMode === "high" ? t("jk.high") : t("jk.low")} · {t("jk.calls")} <SuitGlyph s={G.calledSuit} size={18} /></>
                   ) : (
-                    <>led <SuitGlyph s={G.calledSuit} size={18} /></>
+                    <>{t("jk.led")} <SuitGlyph s={G.calledSuit} size={18} /></>
                   )}
                 </div>
               );
@@ -327,16 +332,16 @@ export function JokeriBoard({
             {G.lastTrick?.length > 0 && G.trick.length > 0 && (
               <div className="jk-lasttrick">
                 <span className="jk-lt-lbl">
-                  last trick · {G.lastTrickWinner === me ? "you won" : `${nameOf(G.lastTrickWinner ?? "")} won`}
+                  {G.lastTrickWinner === me ? t("jk.lastTrickYouWon") : t("jk.lastTrickWon", { name: nameOf(G.lastTrickWinner ?? "") })}
                 </span>
                 <div className="jk-lt-cards">
-                  {G.lastTrick.map((t, i) => (
+                  {G.lastTrick.map((tc, i) => (
                     <div
                       key={i}
-                      className={`jk-lt-card ${t.player === G.lastTrickWinner ? "won" : ""}`}
-                      title={t.player === me ? "You" : nameOf(t.player)}
+                      className={`jk-lt-card ${tc.player === G.lastTrickWinner ? "won" : ""}`}
+                      title={tc.player === me ? t("common.you") : nameOf(tc.player)}
                     >
-                      {isJoker(t.card) ? <Card joker size={46} /> : <Card r={t.card.r} s={t.card.s} size={46} />}
+                      {isJoker(tc.card) ? <Card joker size={46} /> : <Card r={tc.card.r} s={tc.card.s} size={46} />}
                     </div>
                   ))}
                 </div>
@@ -348,14 +353,14 @@ export function JokeriBoard({
         {/* contextual action panels */}
         {state.yourTurn && G.phase === "trump" && (
           <div className="jk-panel">
-            <span className="jk-panel-lbl">Choose trump</span>
+            <span className="jk-panel-lbl">{t("jk.chooseTrumpBtn")}</span>
             <div className="jk-suit-row">
               {SUITS.map((s) => (
-                <button key={s} className="jk-suit-btn" onClick={() => onMove("chooseTrump", { trump: s })} aria-label={suitName(s)}>
+                <button key={s} className="jk-suit-btn" onClick={() => onMove("chooseTrump", { trump: s })} aria-label={t(`suit.${s}`)}>
                   <SuitGlyph s={s} size={30} />
                 </button>
               ))}
-              <button className="jk-nt-btn" onClick={() => onMove("chooseTrump", { trump: null })}>No trump</button>
+              <button className="jk-nt-btn" onClick={() => onMove("chooseTrump", { trump: null })}>{t("jk.noTrumpShort")}</button>
             </div>
           </div>
         )}
@@ -363,10 +368,10 @@ export function JokeriBoard({
         {state.yourTurn && G.phase === "bid" && (
           <div className="jk-panel">
             <span className="jk-panel-lbl">
-              Your bid
+              {t("jk.yourBid")}
               {G.forbiddenBid != null && G.forbiddenBid >= 0 && (
-                <span className="jk-savaldebulo" title="savaldebulo — the four bids can't total the tricks, so someone must miss">
-                  savaldebulo · can't say {G.forbiddenBid}
+                <span className="jk-savaldebulo" title={t("jk.savaldebulo")}>
+                  {t("jk.cantSay", { n: G.forbiddenBid })}
                 </span>
               )}
             </span>
@@ -378,10 +383,10 @@ export function JokeriBoard({
                     key={b}
                     className={`jk-bid-btn ${b === 0 ? "pass" : ""} ${forbidden ? "forbidden" : ""}`}
                     disabled={forbidden}
-                    title={forbidden ? "savaldebulo: the bids can't total the number of tricks" : undefined}
+                    title={forbidden ? t("jk.savaldebulo") : undefined}
                     onClick={() => onMove("bid", { bid: b })}
                   >
-                    {b === 0 ? "Pass" : b}
+                    {b === 0 ? t("jk.pass") : b}
                   </button>
                 );
               })}
@@ -393,14 +398,14 @@ export function JokeriBoard({
         <div className="jk-hand-area">
           {G.bids[me] != null && (
             <div className="jk-mybid" title="how many tricks you called (– = pass)">
-              <span className="jk-mybid-lbl">you said</span>
+              <span className="jk-mybid-lbl">{t("jk.youSaid")}</span>
               <span className={`jk-mybid-val ${G.bids[me] === 0 ? "pass" : ""}`}>{G.bids[me] === 0 ? "–" : G.bids[me]}</span>
-              {G.phase === "play" && <span className="jk-mybid-took">took {G.taken[me] ?? 0}</span>}
+              {G.phase === "play" && <span className="jk-mybid-took">{t("jk.took", { n: G.taken[me] ?? 0 })}</span>}
             </div>
           )}
           <div className="jk-hand">
           {G.hand.length === 0 ? (
-            <span className="hint">No cards this deal.</span>
+            <span className="hint">{t("jk.noCards")}</span>
           ) : (
             sortHand(G.hand).map((c, i, arr) => {
               const k = key(c);
@@ -431,18 +436,18 @@ export function JokeriBoard({
       {picker && (
         <div className="jk-picker-backdrop" onClick={() => setPicker(null)}>
           <div className="jk-picker" onClick={(e) => e.stopPropagation()}>
-            <div className="jk-picker-title">Play the Joker</div>
+            <div className="jk-picker-title">{t("jk.playJoker")}</div>
             <p className="hint">
-              High wins the trick; Low ducks it{isLead ? ". Leading a Joker calls a suit everyone must follow." : "."}
+              {t("jk.jokerHelp", { lead: isLead ? t("jk.jokerHelpLead") : "" })}
             </p>
             {isLead ? (
               <div className="jk-picker-lead">
                 {(["high", "low"] as const).map((mode) => (
                   <div key={mode} className="jk-picker-mode">
-                    <span className="jk-picker-mode-lbl">{mode === "high" ? "High — call" : "Low — call"}</span>
+                    <span className="jk-picker-mode-lbl">{mode === "high" ? t("jk.highCall") : t("jk.lowCall")}</span>
                     <div className="jk-suit-row">
                       {SUITS.map((s) => (
-                        <button key={s} className="jk-suit-btn" onClick={() => playJoker(mode, s)} aria-label={`${mode} call ${suitName(s)}`}>
+                        <button key={s} className="jk-suit-btn" onClick={() => playJoker(mode, s)} aria-label={`${t(mode === "high" ? "jk.high" : "jk.low")} ${t(`suit.${s}`)}`}>
                           <SuitGlyph s={s} size={26} />
                         </button>
                       ))}
@@ -452,8 +457,8 @@ export function JokeriBoard({
               </div>
             ) : (
               <div className="jk-picker-modes">
-                <button className="jk-mode-hi" onClick={() => playJoker("high")}>Play High ↑</button>
-                <button className="jk-mode-lo" onClick={() => playJoker("low")}>Play Low ↓</button>
+                <button className="jk-mode-hi" onClick={() => playJoker("high")}>{t("jk.playHigh")}</button>
+                <button className="jk-mode-lo" onClick={() => playJoker("low")}>{t("jk.playLow")}</button>
               </div>
             )}
           </div>
@@ -468,11 +473,12 @@ export function JokeriBoard({
 // A card that renders the two black sixes as the dedicated JOKER face,
 // optionally tagged high/low when it's on the table.
 function PlayCard({ c, size = 92, mode }: { c: JCard; size?: number; mode?: "high" | "low" }) {
+  const { t } = useT();
   const joker = isJoker(c);
   return (
     <div className="jk-card" style={{ position: "relative" }}>
       {joker ? <Card joker size={size} /> : <Card r={c.r} s={c.s} size={size} />}
-      {mode && <span className={`jk-mode-tag ${mode}`}>{mode === "high" ? "HIGH ▲" : "LOW ▼"}</span>}
+      {mode && <span className={`jk-mode-tag ${mode}`}>{mode === "high" ? t("jk.highBtn") : t("jk.lowBtn")}</span>}
     </div>
   );
 }
@@ -483,6 +489,7 @@ function PlayCard({ c, size = 92, mode }: { c: JCard; size?: number; mode?: "hig
 // A compact "bid / took" scoreboard for a seat — the take cell turns green when
 // it matches the call, amber when it's overshot.
 function Tally({ bid, took, phase }: { bid: number | null; took: number; phase: "trump" | "bid" | "play" | "done" }) {
+  const { t } = useT();
   const bidLabel = bid == null ? "—" : bid === 0 ? "pas" : String(bid);
   const made = bid != null && bid >= 1 && took === bid;
   const over = bid != null && ((bid >= 1 && took > bid) || (bid === 0 && took > 0));
@@ -491,12 +498,12 @@ function Tally({ bid, took, phase }: { bid: number | null; took: number; phase: 
     <div className="jk-tally">
       <span className="jk-tally-cell">
         <b className={bid === 0 ? "pas" : ""}>{bidLabel}</b>
-        <i>bid</i>
+        <i>{t("jk.bid")}</i>
       </span>
       {showTook && (
         <span className={`jk-tally-cell took ${made ? "made" : ""} ${over ? "over" : ""}`}>
           <b>{took}</b>
-          <i>took</i>
+          <i>{t("jk.tookLbl")}</i>
         </span>
       )}
     </div>
@@ -520,6 +527,7 @@ function TableSeat({
   teamColor: (p: string) => string;
   nameOf: (id: string) => string;
 }) {
+  const { t } = useT();
   if (!p) return <div className={`jk-seat ${dir} empty`} />;
   const isMe = p === me;
   const tc = teamColor(p);
@@ -529,8 +537,8 @@ function TableSeat({
       <div className="jk-seat-plate">
         <div className="jk-seat-head">
           {tc && <span className="jk-team-dot" style={{ background: tc }} />}
-          <span className="jk-seat-name">{isMe ? "You" : nameOf(p)}</span>
-          {p === G.dealer && <span className="jk-badge" title="dealer">D</span>}
+          <span className="jk-seat-name">{isMe ? t("common.you") : nameOf(p)}</span>
+          {p === G.dealer && <span className="jk-badge" title="dealer">{t("jk.dealer")}</span>}
           {acting && <span className="jk-turn-dot" />}
         </div>
         <Tally bid={G.bids[p] ?? null} took={G.taken[p] ?? 0} phase={G.phase} />
@@ -595,6 +603,7 @@ function ScoreGrid({
   teamColor: (p: string) => string;
   nameOf: (id: string) => string;
 }) {
+  const { t } = useT();
   const results = G.handResults ?? [];
   const running: Record<string, number> = Object.fromEntries(G.players.map((p) => [p, 0]));
 
@@ -654,13 +663,13 @@ function ScoreGrid({
   return (
     <aside className="jk-paper">
       <div className="jk-paper-head">
-        <span className="jk-paper-title">Scoresheet</span>
+        <span className="jk-paper-title">{t("jk.scoresheet")}</span>
         <span className="jk-round">{roundLabel}</span>
       </div>
       <div className="jk-trump">
-        <span className="jk-trump-lbl">trump</span>
+        <span className="jk-trump-lbl">{t("jk.trump")}</span>
         {G.trump ? <SuitGlyph s={G.trump} size={22} /> : <span className="jk-notrump">NT</span>}
-        {G.handSize > 0 && <span className="jk-handsize">{G.handSize}-card deal</span>}
+        {G.handSize > 0 && <span className="jk-handsize">{t("jk.cardDeal", { n: G.handSize })}</span>}
       </div>
       {G.handSize > 0 && G.phase !== "trump" && (() => {
         const bt = G.players.reduce((s, p) => s + (G.bids[p] ?? 0), 0);
@@ -668,11 +677,11 @@ function ScoreGrid({
         const gap = G.handSize - bt;
         return (
           <div className={`jk-sheet-bids ${ab ? (gap < 0 ? "over" : gap > 0 ? "under" : "") : ""}`}>
-            <span>bids {bt}/{G.handSize}</span>
+            <span>{t("jk.bids", { a: bt, b: G.handSize })}</span>
             {ab ? (
-              gap < 0 ? <b>წაგლეჯვა +{Math.abs(gap)}</b> : gap > 0 ? <b>შეტენვა −{gap}</b> : <b>full</b>
+              gap < 0 ? <b>წაგლეჯვა +{Math.abs(gap)}</b> : gap > 0 ? <b>შეტენვა −{gap}</b> : <b>{t("jk.full")}</b>
             ) : (
-              gap > 0 && <b className="jk-fill">fill {gap}</b>
+              gap > 0 && <b className="jk-fill">{t("jk.fill", { gap })}</b>
             )}
           </div>
         );
@@ -689,8 +698,8 @@ function ScoreGrid({
                 return (
                   <th key={p} className={`jk-g-name ${p === me ? "you" : ""}`}>
                     {tc && <span className="jk-team-dot" style={{ background: tc }} />}
-                    <span className="jk-g-nick">{p === me ? "You" : nameOf(p)}</span>
-                    {p === G.dealer && <span className="jk-badge" title="dealer">D</span>}
+                    <span className="jk-g-nick">{p === me ? t("common.you") : nameOf(p)}</span>
+                    {p === G.dealer && <span className="jk-badge" title="dealer">{t("jk.dealer")}</span>}
                     {acting && <span className="jk-turn-dot" />}
                   </th>
                 );
@@ -704,7 +713,7 @@ function ScoreGrid({
       {/* standings footer — always-visible running totals (and team sums) ÷100 */}
       <div className="jk-standings">
         <div className="jk-stand-row heads" style={{ ["--cols" as string]: G.players.length }}>
-          <span className="jk-stand-lbl">now</span>
+          <span className="jk-stand-lbl">{t("jk.now")}</span>
           {G.players.map((p) => (
             <span key={p} className="jk-stand-tot">
               {fmtTotal(G.scores[p] ?? 0)}
@@ -718,7 +727,7 @@ function ScoreGrid({
               return (
                 <div key={i} className="jk-teamtotal">
                   <span className="jk-team-dot" style={{ background: TEAM_COLORS[i % TEAM_COLORS.length] }} />
-                  <span className="jk-team-name">Team {String.fromCharCode(65 + i)}</span>
+                  <span className="jk-team-name">{i === 0 ? t("ts.teamA") : i === 1 ? t("ts.teamB") : `Team ${String.fromCharCode(65 + i)}`}</span>
                   <span className="jk-team-sum">{fmtTotal(total)}</span>
                 </div>
               );

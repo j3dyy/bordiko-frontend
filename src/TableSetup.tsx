@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { gameMeta, playersLabel } from "./games.ts";
+import { useT } from "./i18n.tsx";
 
 // Colors for the two partnerships (also used by the Waiting table room).
 export const TEAM_COLORS = ["#6C4CF1", "#FF6A3D"];
@@ -43,6 +44,8 @@ export function TableSetup({
     if (!teamsEligible && mode === "teams") setMode("solo");
   }, [teamsEligible, mode]);
 
+  const { t } = useT();
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
@@ -54,14 +57,14 @@ export function TableSetup({
         <div className="ts-head">
           <span className="game-emoji big">{m.emoji}</span>
           <div>
-            <h3>New {m.name} table</h3>
-            <p className="hint">{playersLabel(m)} players</p>
+            <h3>{t("ts.newTable", { game: m.name })}</h3>
+            <p className="hint">{t("ts.playersLabel", { players: playersLabel(m) })}</p>
           </div>
         </div>
 
         {counts.length > 1 && (
           <div className="ts-field">
-            <span className="ts-label">Players</span>
+            <span className="ts-label">{t("ts.players")}</span>
             <div className="seg">
               {counts.map((n) => (
                 <button
@@ -78,16 +81,16 @@ export function TableSetup({
 
         {teamsEligible && (
           <div className="ts-field">
-            <span className="ts-label">Format</span>
+            <span className="ts-label">{t("ts.format")}</span>
             <div className="ts-formats">
               <button className={mode === "solo" ? "fmt active" : "fmt"} onClick={() => setMode("solo")}>
-                <span className="fmt-title">Free-for-all</span>
-                <span className="fmt-sub">Everyone for themselves</span>
+                <span className="fmt-title">{t("ts.free")}</span>
+                <span className="fmt-sub">{t("ts.freeSub")}</span>
               </button>
               <button className={mode === "teams" ? "fmt active" : "fmt"} onClick={() => setMode("teams")}>
-                <span className="fmt-title">Teams</span>
+                <span className="fmt-title">{t("ts.teams")}</span>
                 <span className="fmt-sub">
-                  Partners across · {seats / 2} v {seats / 2}
+                  {t("ts.teamsSub", { a: seats / 2, b: seats / 2 })}
                 </span>
               </button>
             </div>
@@ -98,21 +101,21 @@ export function TableSetup({
 
         {isJokeri && (
           <div className="ts-field">
-            <span className="ts-label">Deal schedule</span>
+            <span className="ts-label">{t("ts.dealSchedule")}</span>
             <div className="ts-formats">
               <button
                 className={jokeriFormat === "standard" ? "fmt active" : "fmt"}
                 onClick={() => setJokeriFormat("standard")}
               >
-                <span className="fmt-title">Standard</span>
-                <span className="fmt-sub">Classic 24 deals · 1→8, 9s, 8→1, 9s</span>
+                <span className="fmt-title">{t("ts.standard")}</span>
+                <span className="fmt-sub">{t("ts.standardSub")}</span>
               </button>
               <button
                 className={jokeriFormat === "nines" ? "fmt active" : "fmt"}
                 onClick={() => setJokeriFormat("nines")}
               >
-                <span className="fmt-title">Direct nines</span>
-                <span className="fmt-sub">Eight 9-card deals · faster</span>
+                <span className="fmt-title">{t("ts.nines")}</span>
+                <span className="fmt-sub">{t("ts.ninesSub")}</span>
               </button>
             </div>
           </div>
@@ -120,14 +123,14 @@ export function TableSetup({
 
         {isJokeri && (
           <div className="ts-field">
-            <span className="ts-label">Khisht <span className="ts-optional">failed bid</span></span>
+            <span className="ts-label">{t("ts.khisht")} <span className="ts-optional">{t("ts.failedBid")}</span></span>
             <div className="seg">
               {(
                 [
-                  { v: "spec", label: "−100 × deal", sub: "classic" },
-                  { v: "-200", label: "−200", sub: "flat" },
-                  { v: "-500", label: "−500", sub: "harsh" },
-                ] as const
+                  { v: "spec", label: t("ts.khishtSpec"), sub: t("ts.khishtClassic") },
+                  { v: "-200", label: "−200", sub: t("ts.khishtFlat") },
+                  { v: "-500", label: "−500", sub: t("ts.khishtHarsh") },
+                ]
               ).map((o) => (
                 <button
                   key={o.v}
@@ -143,27 +146,27 @@ export function TableSetup({
         )}
 
         <div className="ts-field">
-          <span className="ts-label">Visibility</span>
+          <span className="ts-label">{t("ts.visibility")}</span>
           <div className="ts-formats">
             <button className={visibility === "public" ? "fmt active" : "fmt"} onClick={() => setVisibility("public")}>
-              <span className="fmt-title">Public</span>
-              <span className="fmt-sub">Listed in “Live now”</span>
+              <span className="fmt-title">{t("ts.public")}</span>
+              <span className="fmt-sub">{t("ts.publicSub")}</span>
             </button>
             <button className={visibility === "private" ? "fmt active" : "fmt"} onClick={() => setVisibility("private")}>
-              <span className="fmt-title">🔒 Private</span>
-              <span className="fmt-sub">Invite by link only</span>
+              <span className="fmt-title">{t("ts.private")}</span>
+              <span className="fmt-sub">{t("ts.privateSub")}</span>
             </button>
           </div>
         </div>
 
         {visibility === "private" && (
           <div className="ts-field">
-            <span className="ts-label">Password <span className="ts-optional">optional</span></span>
+            <span className="ts-label">{t("ts.password")} <span className="ts-optional">{t("ts.optional")}</span></span>
             <input
               type="text"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Leave blank for link-only"
+              placeholder={t("ts.passwordPlaceholder")}
               maxLength={64}
               autoComplete="off"
             />
@@ -173,13 +176,13 @@ export function TableSetup({
         {err && <p className="error">{err}</p>}
         <div className="ts-actions">
           <button className="ghost" onClick={onClose}>
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             disabled={busy}
             onClick={() => onSubmit(seats, teamsEligible ? mode : "solo", visibility, visibility === "private" ? password.trim() : "", isJokeri ? khisht : "", isJokeri ? jokeriFormat : "")}
           >
-            {busy ? "Creating…" : "Create table"}
+            {busy ? t("ts.creating") : t("ts.createTable")}
           </button>
         </div>
       </div>
@@ -189,19 +192,20 @@ export function TableSetup({
 
 // A tiny diagram of the two partnerships: seat numbers colored by team.
 function TeamPreview({ seats }: { seats: number }) {
+  const { t } = useT();
   const teamA: number[] = [];
   const teamB: number[] = [];
   for (let i = 0; i < seats; i++) (i % 2 === 0 ? teamA : teamB).push(i + 1);
   return (
     <div className="ts-preview">
       <div className="ts-team" style={{ ["--team" as string]: TEAM_COLORS[0] }}>
-        <span className="ts-team-tag">Team A</span>
-        <span className="ts-team-seats">seats {teamA.join(" & ")}</span>
+        <span className="ts-team-tag">{t("ts.teamA")}</span>
+        <span className="ts-team-seats">{t("ts.seatsList", { seats: teamA.join(" & ") })}</span>
       </div>
-      <span className="ts-vs">vs</span>
+      <span className="ts-vs">{t("ts.vs")}</span>
       <div className="ts-team" style={{ ["--team" as string]: TEAM_COLORS[1] }}>
-        <span className="ts-team-tag">Team B</span>
-        <span className="ts-team-seats">seats {teamB.join(" & ")}</span>
+        <span className="ts-team-tag">{t("ts.teamB")}</span>
+        <span className="ts-team-seats">{t("ts.seatsList", { seats: teamB.join(" & ") })}</span>
       </div>
     </div>
   );

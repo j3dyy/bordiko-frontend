@@ -2,7 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { useMatch } from "./useMatch.ts";
 import { leaveMatch } from "./api.ts";
 import { isMuted, setMuted, soundEmote, soundRing } from "./sound.ts";
+import { useT } from "./i18n.tsx";
 import type { LiveEmote } from "./useMatch.ts";
+
+type TFn = (key: string, vars?: Record<string, string | number>) => string;
 
 // Quick reactions players can fire without typing (relayed to the whole table).
 const EMOTES = [
@@ -36,9 +39,9 @@ function outcomeFor(result: StateMsg["result"], myId: string): "win" | "lose" | 
   return null;
 }
 
-function resultText(s: StateMsg, myId: string): string {
+function resultText(s: StateMsg, myId: string, t: TFn): string {
   const o = outcomeFor(s.result, myId);
-  const label = o === "draw" ? "Draw" : o === "win" ? "You win" : o === "lose" ? "You lose" : "Game over";
+  const label = o === "draw" ? t("result.draw") : o === "win" ? t("result.youWin") : o === "lose" ? t("result.youLose") : t("result.gameOver");
   return `${label}${s.result?.reason ? ` — ${s.result.reason}` : ""}`;
 }
 
@@ -55,6 +58,7 @@ export function Game({
   onLeave: () => void;
   onLeaderboard?: () => void;
 }) {
+  const { t } = useT();
   const { state, connected, errors, chat, emotes, sendMove, sendChat, sendEmote } = useMatch(matchId, playerId);
 
   // Sound each incoming reaction once (ring for the bell, a soft blip otherwise).
@@ -97,27 +101,27 @@ export function Game({
   return (
     <div className="game">
       <div className="statusbar">
-        <span className={connected ? "dot on" : "dot off"} title={connected ? "connected" : "offline"} />
+        <span className={connected ? "dot on" : "dot off"} title={connected ? t("game.connected") : t("game.offline")} />
         <span className="game-tag">
           {meta.emoji} {meta.name}
         </span>
-        <code className="mid" title="match id">{matchId}</code>
-        {state && <span>turn {state.turn} · move {state.moveCount}</span>}
+        <code className="mid" title={t("game.matchId")}>{matchId}</code>
+        {state && <span>{t("game.turnMove", { turn: state.turn, move: state.moveCount })}</span>}
         {state && !state.ended && (
           <span className={state.yourTurn ? "turn you" : "turn"}>
-            {state.yourTurn ? "● your turn" : "waiting…"}
+            {state.yourTurn ? t("game.yourTurn") : t("game.waiting")}
           </span>
         )}
         {state && !state.ended && <TurnTimer deadline={state.turnDeadline} yourTurn={state.yourTurn} />}
-        {state?.ended && <span className="result">{resultText(state, playerId)}</span>}
+        {state?.ended && <span className="result">{resultText(state, playerId, t)}</span>}
         <span className="statusbar-actions">
           <SoundToggle />
-          <button className="ghost" onClick={onLeave} title="Leave the page; you can resume this match later">
-            Back
+          <button className="ghost" onClick={onLeave} title={t("game.backTitle")}>
+            {t("game.back")}
           </button>
           {state && !state.ended && (
             <button className="ghost danger" onClick={() => { setLeaveErr(""); setConfirmLeave(true); }} disabled={leaving}>
-              {leaving ? "Leaving…" : "Leave game"}
+              {leaving ? t("game.leaving") : t("game.leaveGame")}
             </button>
           )}
         </span>
@@ -136,7 +140,7 @@ export function Game({
               <AutoBoard state={state} onMove={sendMove} />
             )
           ) : (
-            <p className="hint">Connecting…</p>
+            <p className="hint">{t("game.connecting")}</p>
           )}
 
           <RateBar gameId={gameId} name={meta.name} />
@@ -169,18 +173,15 @@ export function Game({
       {confirmLeave && (
         <div className="modal-backdrop" onClick={() => setConfirmLeave(false)}>
           <div className="modal confirm-leave" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-            <h3>Leave the game?</h3>
-            <p className="hint">
-              This match can't continue without you, so your team forfeits and it counts as a loss. Everyone will be
-              freed to start a new game. To just step away and resume later, use <strong>Back</strong> instead.
-            </p>
+            <h3>{t("leave.title")}</h3>
+            <p className="hint">{t("leave.body")}</p>
             {leaveErr && <p className="error">{leaveErr}</p>}
             <div className="ts-actions">
               <button className="ghost" onClick={() => setConfirmLeave(false)} disabled={leaving}>
-                Keep playing
+                {t("leave.keepPlaying")}
               </button>
               <button className="danger" onClick={forfeit} disabled={leaving}>
-                {leaving ? "Leaving…" : "Leave & forfeit"}
+                {leaving ? t("game.leaving") : t("leave.forfeit")}
               </button>
             </div>
           </div>
@@ -192,6 +193,7 @@ export function Game({
 
 // Mute/unmute the game's sound effects (persisted in localStorage).
 function SoundToggle() {
+  const { t } = useT();
   const [muted, setMutedState] = useState(isMuted());
   return (
     <button
@@ -201,8 +203,8 @@ function SoundToggle() {
         setMuted(m);
         setMutedState(m);
       }}
-      title={muted ? "Sound off — click to unmute" : "Sound on — click to mute"}
-      aria-label={muted ? "Unmute sounds" : "Mute sounds"}
+      title={muted ? t("sound.muted") : t("sound.on")}
+      aria-label={muted ? t("sound.muted") : t("sound.on")}
     >
       {muted ? "🔇" : "🔊"}
     </button>
@@ -212,6 +214,7 @@ function SoundToggle() {
 // A live per-turn countdown from the server's deadline. The gateway auto-plays a
 // safe move when it hits zero, so this is a warning, not a hard client cutoff.
 function TurnTimer({ deadline, yourTurn }: { deadline?: number; yourTurn: boolean }) {
+  const { t } = useT();
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!deadline) return;
@@ -224,7 +227,7 @@ function TurnTimer({ deadline, yourTurn }: { deadline?: number; yourTurn: boolea
   const ss = String(left % 60).padStart(2, "0");
   const urgent = left <= 10;
   return (
-    <span className={`turn-timer${urgent ? " urgent" : ""}${yourTurn ? " you" : ""}`} title="time left this turn">
+    <span className={`turn-timer${urgent ? " urgent" : ""}${yourTurn ? " you" : ""}`} title={t("timer.title")}>
       ⏱ {mm}:{ss}
     </span>
   );
@@ -247,26 +250,27 @@ function GameOver({
   onLeaderboard?: () => void;
   onDismiss: () => void;
 }) {
+  const { t } = useT();
   const o = outcomeFor(result, myId);
   const outcome = o ?? "lose";
-  const title = o === "draw" ? "It's a draw" : o === "win" ? "You win!" : "You lose";
+  const title = o === "draw" ? t("go.draw") : o === "win" ? t("go.win") : t("go.lose");
   const emoji = o === "draw" ? "🤝" : o === "win" ? "🏆" : "😔";
 
   return (
     <div className="gameover-backdrop" onClick={onDismiss}>
       <div className={`gameover ${outcome}`} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-        <button className="go-close" onClick={onDismiss} aria-label="view final board">×</button>
+        <button className="go-close" onClick={onDismiss} aria-label={t("go.viewBoard")}>×</button>
         <div className="go-emoji">{emoji}</div>
-        <div className="go-eyebrow">{meta.emoji} {meta.name} · game over</div>
+        <div className="go-eyebrow">{meta.emoji} {t("go.eyebrow", { game: meta.name })}</div>
         <h2 className="go-title">{title}</h2>
         {result?.reason && <p className="go-reason">{result.reason}</p>}
         <div className="go-actions">
           {onLeaderboard && (
-            <button className="ghost" onClick={onLeaderboard}>View leaderboard</button>
+            <button className="ghost" onClick={onLeaderboard}>{t("go.viewLeaderboard")}</button>
           )}
-          <button onClick={onLeave}>Back to games</button>
+          <button onClick={onLeave}>{t("go.backToGames")}</button>
         </div>
-        <button className="go-inspect" onClick={onDismiss}>View final board</button>
+        <button className="go-inspect" onClick={onDismiss}>{t("go.viewBoard")}</button>
       </div>
     </div>
   );
@@ -286,6 +290,7 @@ function Chat({
   onSend: (text: string) => void;
   onEmote: (emote: string) => void;
 }) {
+  const { t } = useT();
   const [text, setText] = useState("");
   const logRef = useRef<HTMLDivElement>(null);
 
@@ -303,15 +308,15 @@ function Chat({
   return (
     <aside className="chat">
       <div className="chat-head">
-        <span className={connected ? "live-dot" : "live-dot off"} /> Chat
+        <span className={connected ? "live-dot" : "live-dot off"} /> {t("chat.title")}
       </div>
       <div className="chat-log" ref={logRef}>
         {chat.length === 0 ? (
-          <p className="chat-empty">No messages yet — say hi to your opponent 👋</p>
+          <p className="chat-empty">{t("chat.empty")}</p>
         ) : (
           chat.map((m, i) => (
             <div key={i} className={m.from === myId ? "chat-msg me" : "chat-msg"}>
-              <span className="chat-name">{m.from === myId ? "You" : m.name || "Player"}</span>
+              <span className="chat-name">{m.from === myId ? t("common.you") : m.name || t("common.player")}</span>
               <span className="chat-text">{m.text}</span>
             </div>
           ))
@@ -324,8 +329,8 @@ function Chat({
             className="emote-btn"
             onClick={() => onEmote(e.key)}
             disabled={!connected}
-            title={e.label}
-            aria-label={e.label}
+            title={t("emote." + e.key)}
+            aria-label={t("emote." + e.key)}
           >
             {e.emoji}
           </button>
@@ -335,12 +340,12 @@ function Chat({
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder={connected ? "Message…" : "Reconnecting…"}
+          placeholder={connected ? t("chat.message") : t("chat.reconnecting")}
           maxLength={500}
           disabled={!connected}
           aria-label="chat message"
         />
-        <button type="submit" disabled={!connected || !text.trim()}>Send</button>
+        <button type="submit" disabled={!connected || !text.trim()}>{t("chat.send")}</button>
       </form>
     </aside>
   );
@@ -349,13 +354,14 @@ function Chat({
 // Floating reactions that pop over the board and drift up as they fade. Own
 // reactions lean right, others left, so a table exchange reads at a glance.
 function EmoteLayer({ emotes, myId }: { emotes: LiveEmote[]; myId: string }) {
+  const { t } = useT();
   if (emotes.length === 0) return null;
   return (
     <div className="emote-layer" aria-hidden>
       {emotes.map((e, i) => (
         <div key={e.id} className={`emote-pop ${e.from === myId ? "mine" : ""}`} style={{ ["--i" as string]: i }}>
           <span className="emote-face">{EMOJI[e.emote] ?? "❓"}</span>
-          <span className="emote-who">{e.from === myId ? "You" : e.name || "Player"}</span>
+          <span className="emote-who">{e.from === myId ? t("common.you") : e.name || t("common.player")}</span>
         </div>
       ))}
     </div>

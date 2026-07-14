@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { fetchProviders, loginURL } from "./api.ts";
+import { useT } from "./i18n.tsx";
 import type { Providers } from "./wire.ts";
 
 export function Login() {
+  const { t } = useT();
   const [providers, setProviders] = useState<Providers | null>(null);
   const [devName, setDevName] = useState("");
   const authError = new URLSearchParams(window.location.search).get("auth_error");
@@ -18,28 +20,25 @@ export function Login() {
       <div className="login-card">
         <img className="login-mark" src="/bordiko-icon.svg" alt="Bordiko" />
         <h1>Bordiko</h1>
-        <p className="login-sub">Sign in to play. Every game is ranked.</p>
+        <p className="login-sub">{t("login.sub")}</p>
 
-        {authError && <p className="error">Sign-in failed: {authError}</p>}
+        {authError && <p className="error">{t("login.failed", { error: authError })}</p>}
 
         <div className="login-buttons">
           {providers?.providers.includes("google") && (
             <a className="oauth google" href={loginURL("google")}>
-              <span className="oauth-icon">G</span> Continue with Google
+              <span className="oauth-icon">G</span> {t("login.google")}
             </a>
           )}
           {providers?.providers.includes("github") && (
             <a className="oauth github" href={loginURL("github")}>
-              <span className="oauth-icon">GH</span> Continue with GitHub
+              <span className="oauth-icon">GH</span> {t("login.github")}
             </a>
           )}
         </div>
 
         {providers && !providers.providers.includes("google") && !providers.providers.includes("github") && (
-          <p className="hint">
-            OAuth providers aren't configured yet. Set GOOGLE_/GITHUB_CLIENT_ID on the
-            gateway to enable them.
-          </p>
+          <p className="hint">{t("login.noProviders")}</p>
         )}
 
         {providers?.dev && (
@@ -50,15 +49,15 @@ export function Login() {
               window.location.href = loginURL("dev", devName || "guest");
             }}
           >
-            <div className="or">or continue as a guest (dev)</div>
+            <div className="or">{t("login.orGuest")}</div>
             <div className="dev-row">
               <input
                 value={devName}
                 onChange={(e) => setDevName(e.target.value)}
-                placeholder="pick a name"
+                placeholder={t("login.pickName")}
                 aria-label="dev display name"
               />
-              <button type="submit">Enter</button>
+              <button type="submit">{t("login.enter")}</button>
             </div>
           </form>
         )}

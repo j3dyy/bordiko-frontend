@@ -4,6 +4,7 @@ import { gameMeta } from "./games.ts";
 import { TEAM_COLORS } from "./TableSetup.tsx";
 import { lobbyFull, seatedCount } from "./wire.ts";
 import type { Lobby, Seat } from "./wire.ts";
+import { useT } from "./i18n.tsx";
 
 // The table room. After creating or joining a table you land here: a ring of
 // seats you can sit in (in teams mode, where you sit is which side you're on),
@@ -30,6 +31,7 @@ export function Waiting({
   const onCancelRef = useRef(onCancel);
   onStartRef.current = onStart;
   onCancelRef.current = onCancel;
+  const { t } = useT();
 
   useEffect(() => {
     const poll = async () => {
@@ -82,7 +84,7 @@ export function Waiting({
       <div className="waiting">
         <div className="waiting-card">
           <div className="spinner" />
-          <p className="waiting-status">Loading table…</p>
+          <p className="waiting-status">{t("wait.loadingTable")}</p>
         </div>
       </div>
     );
@@ -125,9 +127,9 @@ export function Waiting({
 
   const statusLine = full
     ? isHost
-      ? "All seats filled — start when ready"
-      : "Waiting for the host to start…"
-    : `Waiting for players… ${filled}/${total}`;
+      ? t("wait.allFilled")
+      : t("wait.waitHost")
+    : t("wait.waitPlayers", { filled, total });
 
   return (
     <div className="waiting">
@@ -139,23 +141,23 @@ export function Waiting({
           </div>
           <div className="table-badges">
             <span className={current.mode === "teams" ? "mode-badge teams" : "mode-badge"}>
-              {current.mode === "teams" ? "Teams · partners across" : "Free-for-all"}
+              {current.mode === "teams" ? t("wait.teamsBadge") : t("wait.freeBadge")}
             </span>
             {current.visibility === "private" && (
-              <span className="mode-badge private">🔒 {current.hasPassword ? "Private · password" : "Private"}</span>
+              <span className="mode-badge private">{current.hasPassword ? t("wait.privatePwd") : t("wait.private")}</span>
             )}
             {current.gameId === "jokeri" && (
               <span className="mode-badge">
-                {current.format === "nines" ? "Direct nines" : "Standard · 24"}
-                {current.khisht ? ` · khisht ${current.khisht === "spec" ? "−100×deal" : current.khisht}` : ""}
+                {current.format === "nines" ? t("wait.nines") : t("wait.standard")}
+                {current.khisht ? ` · ${t("wait.khisht", { v: current.khisht === "spec" ? "−100×deal" : current.khisht })}` : ""}
               </span>
             )}
           </div>
         </div>
 
         <div className="table-share">
-          <input className="share-url" value={inviteUrl} readOnly onFocus={(e) => e.currentTarget.select()} aria-label="invite link" />
-          <button className="ghost small" onClick={copyInvite}>{copied ? "✓ Copied" : "🔗 Copy invite"}</button>
+          <input className="share-url" value={inviteUrl} readOnly onFocus={(e) => e.currentTarget.select()} aria-label={t("wait.inviteLink")} />
+          <button className="ghost small" onClick={copyInvite}>{copied ? t("wait.copied") : t("wait.copyInvite")}</button>
         </div>
 
         <div className="table-ring">
@@ -181,10 +183,10 @@ export function Waiting({
             <p className="table-status">{statusLine}</p>
             {isHost ? (
               <button className="start-btn" disabled={!full || acting} onClick={start}>
-                {full ? "▶ Start game" : `${filled}/${total} seated`}
+                {full ? t("wait.start") : t("wait.seated", { filled, total })}
               </button>
             ) : (
-              <div className="table-center-hint">seat {filled}/{total}</div>
+              <div className="table-center-hint">{t("wait.seatCount", { filled, total })}</div>
             )}
           </div>
         </div>
@@ -196,31 +198,33 @@ export function Waiting({
               type="text"
               value={pwd}
               onChange={(e) => setPwd(e.target.value)}
-              placeholder="Table password"
+              placeholder={t("wait.pwdPlaceholder")}
               aria-label="table password"
             />
           )}
           {seated ? (
             <button className="ghost" disabled={acting} onClick={stand}>
-              Stand up
+              {t("wait.standUp")}
             </button>
           ) : (
             <span className="hint">
               {current.hasPassword
-                ? "Enter the password, then pick a seat."
-                : `Pick a seat to join${current.mode === "teams" ? " and choose your team" : ""}.`}
+                ? t("wait.enterPwd")
+                : current.mode === "teams"
+                  ? t("wait.pickSeatTeam")
+                  : t("wait.pickSeat")}
             </span>
           )}
           <button className="ghost" disabled={acting} onClick={leave}>
-            {isHost ? "Cancel table" : "Leave"}
+            {isHost ? t("wait.cancelTable") : t("wait.leave")}
           </button>
         </div>
 
         {err && <p className="error">{err}</p>}
         <p className="hint center">
           {current.visibility === "private"
-            ? "Private table — share the invite link above to bring people in."
-            : "Public table — anyone signed in can also join from “Live now”."}
+            ? t("wait.privateHint")
+            : t("wait.publicHint")}
         </p>
       </div>
     </div>
@@ -253,6 +257,7 @@ function SeatView({
   onAddBot: () => void;
   onRemoveBot: () => void;
 }) {
+  const { t } = useT();
   // Seat 0 at the top, going clockwise.
   const angle = (seat.index / total) * 2 * Math.PI - Math.PI / 2;
   const R = 43; // percent radius from the center
@@ -279,25 +284,25 @@ function SeatView({
           <span className="seat-avatar">{isBotSeat ? "🤖" : (p.name.trim()[0] ?? "?").toUpperCase()}</span>
           <span className="seat-name">{p.name}</span>
           <span className="seat-badges">
-            {seatIsHost && <span className="seat-badge host">Host</span>}
-            {isMe && <span className="seat-badge you">You</span>}
-            {isBotSeat && <span className="seat-badge botbadge">Bot</span>}
+            {seatIsHost && <span className="seat-badge host">{t("wait.host")}</span>}
+            {isMe && <span className="seat-badge you">{t("wait.you")}</span>}
+            {isBotSeat && <span className="seat-badge botbadge">{t("wait.bot")}</span>}
           </span>
           {isBotSeat && isHost && (
             <button className="seat-rmbot" disabled={disabled} onClick={onRemoveBot}>
-              Remove
+              {t("wait.removeBot")}
             </button>
           )}
         </>
       ) : (
         <>
-          <span className="seat-num">Seat {seat.index + 1}</span>
+          <span className="seat-num">{t("wait.seatN", { n: seat.index + 1 })}</span>
           <button className="seat-sit" disabled={disabled} onClick={onSit}>
-            {seatedElsewhere ? "Move here" : "Sit here"}
+            {seatedElsewhere ? t("wait.moveHere") : t("wait.sitHere")}
           </button>
           {isHost && (
             <button className="seat-addbot" disabled={disabled} onClick={onAddBot}>
-              ＋ Add bot
+              {t("wait.addBot")}
             </button>
           )}
         </>

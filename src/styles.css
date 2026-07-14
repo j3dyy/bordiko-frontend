@@ -128,6 +128,11 @@ code { font-family: var(--font-mono); }
 .nav-link.active:hover:not(:disabled) { background: var(--brand-600); color: #fff; }
 .user { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 .user-name { font-size: 14px; font-weight: 500; color: var(--text); }
+/* EN / ქარ language switch */
+.lang-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: var(--panel); }
+.lang-btn { padding: 5px 9px; font-size: 12px; font-weight: 600; background: transparent; color: var(--muted); border: 0; border-radius: 0; cursor: pointer; min-width: 34px; }
+.lang-btn:hover:not(:disabled) { background: var(--brand-600); color: #fff; }
+.lang-btn.active { background: var(--tint-purple-2); color: var(--brand); }
 .avatar { width: 30px; height: 30px; border-radius: 9px; border: 1px solid var(--line); object-fit: cover; }
 
 /* ------------------------------ error boundary --------------------------- */

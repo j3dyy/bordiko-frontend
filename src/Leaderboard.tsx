@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { fetchLeaderboard, listGames } from "./api.ts";
 import { gameMeta, friendlyName } from "./games.ts";
+import { useT } from "./i18n.tsx";
 import type { LeaderRow } from "./wire.ts";
 
 export function Leaderboard({ myId, initialGameId }: { myId: string; initialGameId?: string }) {
+  const { t } = useT();
   const [games, setGames] = useState<string[]>([]);
   const [gameId, setGameId] = useState<string>(initialGameId ?? "");
   const [rows, setRows] = useState<LeaderRow[]>([]);
@@ -31,7 +33,7 @@ export function Leaderboard({ myId, initialGameId }: { myId: string; initialGame
   return (
     <div className="leaderboard">
       <div className="lb-head">
-        <h2 className="section-title">Leaderboard</h2>
+        <h2 className="section-title">{t("lb.title")}</h2>
         <select value={gameId} onChange={(e) => setGameId(e.target.value)}>
           {games.map((g) => (
             <option key={g} value={g}>
@@ -42,20 +44,20 @@ export function Leaderboard({ myId, initialGameId }: { myId: string; initialGame
       </div>
 
       {loading ? (
-        <p className="hint">Loading…</p>
+        <p className="hint">{t("common.loading")}</p>
       ) : rows.length === 0 ? (
-        <p className="hint">No ranked games played yet. Be the first to top the ladder.</p>
+        <p className="hint">{t("lb.empty")}</p>
       ) : (
         <table className="lb-table">
           <thead>
             <tr>
               <th>#</th>
-              <th>Player</th>
-              <th>Rating</th>
-              <th>W</th>
-              <th>L</th>
-              <th>D</th>
-              <th>Win%</th>
+              <th>{t("lb.player")}</th>
+              <th>{t("lb.rating")}</th>
+              <th>{t("lb.w")}</th>
+              <th>{t("lb.l")}</th>
+              <th>{t("lb.d")}</th>
+              <th>{t("lb.winPct")}</th>
             </tr>
           </thead>
           <tbody>

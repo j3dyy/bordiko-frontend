@@ -1,0 +1,500 @@
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+
+// Lightweight, zero-dependency i18n. A tiny dictionary + a `t()` lookup with
+// {name} interpolation, an English fallback (so an un-keyed string degrades to
+// English rather than a raw key), a persisted choice, and a browser-language
+// default. English and ქართული (Georgian) — Jokeri is a Georgian game.
+
+export type Lang = "en" | "ka";
+
+export const LANGS: { code: Lang; label: string; long: string }[] = [
+  { code: "en", label: "EN", long: "English" },
+  { code: "ka", label: "ქარ", long: "ქართული" },
+];
+
+type Dict = Record<string, string>;
+
+const en: Dict = {
+  // common
+  "common.loading": "Loading…",
+  "common.cancel": "Cancel",
+  "common.you": "You",
+  "common.player": "Player",
+  // nav / topbar
+  "nav.play": "Play",
+  "nav.leaderboards": "Leaderboards",
+  "nav.profile": "Profile",
+  "nav.signout": "Sign out",
+  "nav.yourProfile": "Your profile",
+  "nav.language": "Language",
+  // resume banner
+  "resume.text": "You have a game of {game} in progress — you can only play one at a time.",
+  "resume.resume": "Resume",
+  "resume.leave": "Leave",
+  "resume.leaving": "Leaving…",
+  // login
+  "login.sub": "Sign in to play. Every game is ranked.",
+  "login.failed": "Sign-in failed: {error}",
+  "login.google": "Continue with Google",
+  "login.github": "Continue with GitHub",
+  "login.noProviders": "OAuth providers aren’t configured yet. Set GOOGLE_/GITHUB_CLIENT_ID on the gateway to enable them.",
+  "login.orGuest": "or continue as a guest (dev)",
+  "login.pickName": "pick a name",
+  "login.enter": "Enter",
+  // leaderboard
+  "lb.title": "Leaderboard",
+  "lb.empty": "No ranked games played yet. Be the first to top the ladder.",
+  "lb.player": "Player",
+  "lb.rating": "Rating",
+  "lb.w": "W",
+  "lb.l": "L",
+  "lb.d": "D",
+  "lb.winPct": "Win%",
+  // table setup
+  "ts.newTable": "New {game} table",
+  "ts.playersLabel": "{players} players",
+  "ts.players": "Players",
+  "ts.format": "Format",
+  "ts.free": "Free-for-all",
+  "ts.freeSub": "Everyone for themselves",
+  "ts.teams": "Teams",
+  "ts.teamsSub": "Partners across · {a} v {b}",
+  "ts.dealSchedule": "Deal schedule",
+  "ts.standard": "Standard",
+  "ts.standardSub": "Classic 24 deals · 1→8, 9s, 8→1, 9s",
+  "ts.nines": "Direct nines",
+  "ts.ninesSub": "Eight 9-card deals · faster",
+  "ts.khisht": "Khisht",
+  "ts.failedBid": "failed bid",
+  "ts.khishtSpec": "−100 × deal",
+  "ts.khishtClassic": "classic",
+  "ts.khishtFlat": "flat",
+  "ts.khishtHarsh": "harsh",
+  "ts.visibility": "Visibility",
+  "ts.public": "Public",
+  "ts.publicSub": "Listed in “Live now”",
+  "ts.private": "🔒 Private",
+  "ts.privateSub": "Invite by link only",
+  "ts.password": "Password",
+  "ts.optional": "optional",
+  "ts.passwordPlaceholder": "Leave blank for link-only",
+  "ts.creating": "Creating…",
+  "ts.createTable": "Create table",
+  "ts.teamA": "Team A",
+  "ts.teamB": "Team B",
+  "ts.seatsList": "seats {seats}",
+  "ts.vs": "vs",
+  // waiting room
+  "wait.loadingTable": "Loading table…",
+  "wait.teamsBadge": "Teams · partners across",
+  "wait.freeBadge": "Free-for-all",
+  "wait.privatePwd": "🔒 Private · password",
+  "wait.private": "🔒 Private",
+  "wait.nines": "Direct nines",
+  "wait.standard": "Standard · 24",
+  "wait.khisht": "khisht {v}",
+  "wait.inviteLink": "invite link",
+  "wait.copied": "✓ Copied",
+  "wait.copyInvite": "🔗 Copy invite",
+  "wait.allFilled": "All seats filled — start when ready",
+  "wait.waitHost": "Waiting for the host to start…",
+  "wait.waitPlayers": "Waiting for players… {filled}/{total}",
+  "wait.start": "▶ Start game",
+  "wait.seated": "{filled}/{total} seated",
+  "wait.seatCount": "seat {filled}/{total}",
+  "wait.pwdPlaceholder": "Table password",
+  "wait.standUp": "Stand up",
+  "wait.enterPwd": "Enter the password, then pick a seat.",
+  "wait.pickSeat": "Pick a seat to join.",
+  "wait.pickSeatTeam": "Pick a seat to join and choose your team.",
+  "wait.cancelTable": "Cancel table",
+  "wait.leave": "Leave",
+  "wait.privateHint": "Private table — share the invite link above to bring people in.",
+  "wait.publicHint": "Public table — anyone signed in can also join from “Live now”.",
+  "wait.sitHere": "Sit here",
+  "wait.moveHere": "Move here",
+  "wait.seatN": "Seat {n}",
+  "wait.addBot": "＋ Add bot",
+  "wait.removeBot": "Remove",
+  "wait.host": "Host",
+  "wait.you": "You",
+  "wait.bot": "Bot",
+  // game screen
+  "game.connected": "connected",
+  "game.offline": "offline",
+  "game.matchId": "match id",
+  "game.turnMove": "turn {turn} · move {move}",
+  "game.yourTurn": "● your turn",
+  "game.waiting": "waiting…",
+  "game.back": "Back",
+  "game.backTitle": "Leave the page; you can resume this match later",
+  "game.leaveGame": "Leave game",
+  "game.leaving": "Leaving…",
+  "game.connecting": "Connecting…",
+  "result.draw": "Draw",
+  "result.youWin": "You win",
+  "result.youLose": "You lose",
+  "result.gameOver": "Game over",
+  "go.draw": "It’s a draw",
+  "go.win": "You win!",
+  "go.lose": "You lose",
+  "go.eyebrow": "{game} · game over",
+  "go.viewLeaderboard": "View leaderboard",
+  "go.backToGames": "Back to games",
+  "go.viewBoard": "View final board",
+  "leave.title": "Leave the game?",
+  "leave.body": "This match can’t continue without you, so your team forfeits and it counts as a loss. Everyone will be freed to start a new game. To just step away and resume later, use Back instead.",
+  "leave.keepPlaying": "Keep playing",
+  "leave.forfeit": "Leave & forfeit",
+  "chat.title": "Chat",
+  "chat.empty": "No messages yet — say hi to your opponent 👋",
+  "chat.message": "Message…",
+  "chat.reconnecting": "Reconnecting…",
+  "chat.send": "Send",
+  "sound.muted": "Sound off — click to unmute",
+  "sound.on": "Sound on — click to mute",
+  "timer.title": "time left this turn",
+  "emote.ring": "Hurry!",
+  "emote.love": "Sweety",
+  "emote.like": "Like",
+  "emote.dislike": "Dislike",
+  "emote.clap": "Nice",
+  "emote.haha": "Haha",
+  "emote.wow": "Wow",
+  "emote.think": "Hmm",
+  // jokeri board
+  "jk.chooseTrump": "Choose the trump suit for this deal — or no-trump.",
+  "jk.choosingTrump": "{name} is choosing the trump…",
+  "jk.declareBid": "Declare how many tricks you’ll take (0 to pass).",
+  "jk.bidding": "{name} is bidding…",
+  "jk.yourLeadPlay": "Your lead — play any card.",
+  "jk.followSuit": "Follow {suit} if you can, or play a Joker.",
+  "jk.playCard": "Play a card.",
+  "jk.waitingFor": "Waiting for {name}…",
+  "jk.matchOver": "Match over.",
+  "jk.koziri": "koziri",
+  "jk.noTrump": "No trump",
+  "jk.noTrumpShort": "No-trump",
+  "jk.lastTrickYouWon": "last trick · you won",
+  "jk.lastTrickWon": "last trick · {name} won",
+  "jk.won": "won",
+  "jk.yourLead": "Your lead",
+  "jk.leads": "{name} leads",
+  "jk.youLead": "You lead",
+  "jk.biddingShort": "bidding",
+  "jk.choosingTrumpShort": "choosing trump",
+  "jk.led": "led",
+  "jk.calls": "calls",
+  "jk.said": "said",
+  "jk.fill": "fill {gap}",
+  "jk.full": "full",
+  "jk.jokerHelp": "High wins the trick; Low ducks it{lead}.",
+  "jk.jokerHelpLead": ". Leading a Joker calls a suit everyone must follow",
+  "jk.youSaid": "YOU SAID",
+  "jk.took": "took {n}",
+  "jk.pass": "Pass",
+  "jk.yourBid": "Your bid",
+  "jk.cantSay": "savaldebulo · can’t say {n}",
+  "jk.high": "high",
+  "jk.low": "low",
+  "jk.savaldebulo": "savaldebulo — the four bids can’t total the tricks, so someone must miss",
+  "jk.scoresheet": "Scoresheet",
+  "jk.trump": "TRUMP",
+  "jk.cardDeal": "{n}-card deal",
+  "jk.bids": "bids {a}/{b}",
+  "jk.now": "NOW",
+  "jk.bid": "BID",
+  "jk.tookLbl": "TOOK",
+  "jk.dealer": "D",
+  "jk.round": "Round {r} · deal {n}/{total}",
+  "jk.chooseTrumpBtn": "Choose trump",
+  "jk.noCards": "No cards this deal.",
+  "jk.playJoker": "Play the Joker",
+  "jk.highCall": "High — call",
+  "jk.lowCall": "Low — call",
+  "jk.playHigh": "Play High ↑",
+  "jk.playLow": "Play Low ↓",
+  "jk.highBtn": "HIGH ▲",
+  "jk.lowBtn": "LOW ▼",
+  // suits
+  "suit.S": "Spades",
+  "suit.H": "Hearts",
+  "suit.D": "Diamonds",
+  "suit.C": "Clubs",
+};
+
+const ka: Dict = {
+  // common
+  "common.loading": "იტვირთება…",
+  "common.cancel": "გაუქმება",
+  "common.you": "შენ",
+  "common.player": "მოთამაშე",
+  // nav / topbar
+  "nav.play": "თამაში",
+  "nav.leaderboards": "ლიდერბორდი",
+  "nav.profile": "პროფილი",
+  "nav.signout": "გამოსვლა",
+  "nav.yourProfile": "შენი პროფილი",
+  "nav.language": "ენა",
+  // resume banner
+  "resume.text": "{game}-ის თამაში მიმდინარეობს — ერთდროულად მხოლოდ ერთის თამაშია შესაძლებელი.",
+  "resume.resume": "გაგრძელება",
+  "resume.leave": "გასვლა",
+  "resume.leaving": "გამოსვლა…",
+  // login
+  "login.sub": "შედი სათამაშოდ. ყველა თამაში რეიტინგულია.",
+  "login.failed": "შესვლა ვერ მოხერხდა: {error}",
+  "login.google": "გაგრძელება Google-ით",
+  "login.github": "გაგრძელება GitHub-ით",
+  "login.noProviders": "OAuth პროვაიდერები ჯერ არ არის კონფიგურირებული. ჩასართავად gateway-ზე დააყენე GOOGLE_/GITHUB_CLIENT_ID.",
+  "login.orGuest": "ან განაგრძე სტუმრად (dev)",
+  "login.pickName": "აირჩიე სახელი",
+  "login.enter": "შესვლა",
+  // leaderboard
+  "lb.title": "ლიდერბორდი",
+  "lb.empty": "რეიტინგული თამაშები ჯერ არ ჩატარებულა. იყავი პირველი ცხრილის სათავეში.",
+  "lb.player": "მოთამაშე",
+  "lb.rating": "რეიტინგი",
+  "lb.w": "მ",
+  "lb.l": "წ",
+  "lb.d": "ფ",
+  "lb.winPct": "მოგება%",
+  // table setup
+  "ts.newTable": "ახალი მაგიდა — {game}",
+  "ts.playersLabel": "{players} მოთამაშე",
+  "ts.players": "მოთამაშეები",
+  "ts.format": "ფორმატი",
+  "ts.free": "თითო თავისთვის",
+  "ts.freeSub": "ყველა თავისთვის",
+  "ts.teams": "გუნდები",
+  "ts.teamsSub": "პარტნიორები პირისპირ · {a} vs {b}",
+  "ts.dealSchedule": "დარიგების სქემა",
+  "ts.standard": "სტანდარტული",
+  "ts.standardSub": "კლასიკური 24 დარიგება · 1→8, ცხრები, 8→1, ცხრები",
+  "ts.nines": "პირდაპირ ცხრიანებით",
+  "ts.ninesSub": "რვა ცხრაქაღალდიანი დარიგება · უფრო სწრაფი",
+  "ts.khisht": "ხიშტი",
+  "ts.failedBid": "ჩავარდნილი განაცხადი",
+  "ts.khishtSpec": "−100 × დარიგება",
+  "ts.khishtClassic": "კლასიკური",
+  "ts.khishtFlat": "ფიქსირებული",
+  "ts.khishtHarsh": "მკაცრი",
+  "ts.visibility": "ხილვადობა",
+  "ts.public": "საჯარო",
+  "ts.publicSub": "ჩანს „ახლა ცოცხლად“-ში",
+  "ts.private": "🔒 დახურული",
+  "ts.privateSub": "მხოლოდ ბმულით მოწვევა",
+  "ts.password": "პაროლი",
+  "ts.optional": "არასავალდებულო",
+  "ts.passwordPlaceholder": "დატოვე ცარიელი მხოლოდ-ბმულისთვის",
+  "ts.creating": "იქმნება…",
+  "ts.createTable": "მაგიდის შექმნა",
+  "ts.teamA": "გუნდი A",
+  "ts.teamB": "გუნდი B",
+  "ts.seatsList": "ადგილები {seats}",
+  "ts.vs": "vs",
+  // waiting room
+  "wait.loadingTable": "მაგიდა იტვირთება…",
+  "wait.teamsBadge": "გუნდები · პარტნიორები პირისპირ",
+  "wait.freeBadge": "თითო თავისთვის",
+  "wait.privatePwd": "🔒 დახურული · პაროლი",
+  "wait.private": "🔒 დახურული",
+  "wait.nines": "პირდაპირ ცხრიანებით",
+  "wait.standard": "სტანდარტული · 24",
+  "wait.khisht": "ხიშტი {v}",
+  "wait.inviteLink": "მოსაწვევი ბმული",
+  "wait.copied": "✓ დაკოპირდა",
+  "wait.copyInvite": "🔗 ბმულის კოპირება",
+  "wait.allFilled": "ყველა ადგილი დაკავებულია — დაიწყე მზადყოფნისას",
+  "wait.waitHost": "ველოდებით მასპინძლის დაწყებას…",
+  "wait.waitPlayers": "ველოდებით მოთამაშეებს… {filled}/{total}",
+  "wait.start": "▶ თამაშის დაწყება",
+  "wait.seated": "{filled}/{total} დამჯდარი",
+  "wait.seatCount": "ადგილი {filled}/{total}",
+  "wait.pwdPlaceholder": "მაგიდის პაროლი",
+  "wait.standUp": "ადგომა",
+  "wait.enterPwd": "შეიყვანე პაროლი და აირჩიე ადგილი.",
+  "wait.pickSeat": "აირჩიე ადგილი შესაერთებლად.",
+  "wait.pickSeatTeam": "აირჩიე ადგილი და აირჩიე შენი გუნდი.",
+  "wait.cancelTable": "მაგიდის გაუქმება",
+  "wait.leave": "გასვლა",
+  "wait.privateHint": "დახურული მაგიდა — გააზიარე ზემოთ მოცემული ბმული ხალხის მოსაწვევად.",
+  "wait.publicHint": "საჯარო მაგიდა — ნებისმიერ ავტორიზებულ მოთამაშეს შეუძლია შემოგიერთდეს „ახლა ცოცხლად“-იდან.",
+  "wait.sitHere": "დაჯექი აქ",
+  "wait.moveHere": "გადმოჯექი აქ",
+  "wait.seatN": "ადგილი {n}",
+  "wait.addBot": "＋ ბოტის დამატება",
+  "wait.removeBot": "მოშორება",
+  "wait.host": "მასპინძელი",
+  "wait.you": "შენ",
+  "wait.bot": "ბოტი",
+  // game screen
+  "game.connected": "დაკავშირებულია",
+  "game.offline": "ხაზგარეშე",
+  "game.matchId": "თამაშის id",
+  "game.turnMove": "სვლა {turn} · ნაბიჯი {move}",
+  "game.yourTurn": "● შენი სვლაა",
+  "game.waiting": "ელოდება…",
+  "game.back": "უკან",
+  "game.backTitle": "დატოვე გვერდი; მოგვიანებით შეძლებ თამაშის გაგრძელებას",
+  "game.leaveGame": "თამაშის დატოვება",
+  "game.leaving": "გამოსვლა…",
+  "game.connecting": "უკავშირდება…",
+  "result.draw": "ფრე",
+  "result.youWin": "შენ იგებ",
+  "result.youLose": "შენ აგებ",
+  "result.gameOver": "თამაში დასრულდა",
+  "go.draw": "ფრეა",
+  "go.win": "შენ გაიმარჯვე!",
+  "go.lose": "შენ წააგე",
+  "go.eyebrow": "{game} · თამაში დასრულდა",
+  "go.viewLeaderboard": "ლიდერბორდის ნახვა",
+  "go.backToGames": "თამაშებში დაბრუნება",
+  "go.viewBoard": "საბოლოო დაფის ნახვა",
+  "leave.title": "დატოვებ თამაშს?",
+  "leave.body": "ეს თამაში შენ გარეშე ვერ გაგრძელდება, ამიტომ შენი გუნდი დანებდება და ეს წაგებად ჩაითვლება. ყველა გათავისუფლდება ახალი თამაშისთვის. თუ უბრალოდ დროებით გინდა გასვლა და მოგვიანებით გაგრძელება, გამოიყენე „უკან“.",
+  "leave.keepPlaying": "თამაშის გაგრძელება",
+  "leave.forfeit": "გასვლა და დანებება",
+  "chat.title": "ჩატი",
+  "chat.empty": "ჯერ არცერთი შეტყობინება — მიესალმე მოწინააღმდეგეს 👋",
+  "chat.message": "შეტყობინება…",
+  "chat.reconnecting": "ხელახლა უკავშირდება…",
+  "chat.send": "გაგზავნა",
+  "sound.muted": "ხმა გამორთულია — დააჭირე ჩასართავად",
+  "sound.on": "ხმა ჩართულია — დააჭირე გამოსართავად",
+  "timer.title": "დარჩენილი დრო ამ სვლაზე",
+  "emote.ring": "იჩქარე!",
+  "emote.love": "საყვარელო",
+  "emote.like": "მოწონება",
+  "emote.dislike": "არ მომწონს",
+  "emote.clap": "მაგარია",
+  "emote.haha": "ჰაჰა",
+  "emote.wow": "ვაუ",
+  "emote.think": "ჰმ",
+  // jokeri board
+  "jk.chooseTrump": "აირჩიე კოზირი ამ დარიგებისთვის — ან უკოზირო.",
+  "jk.choosingTrump": "{name} ირჩევს კოზირს…",
+  "jk.declareBid": "თქვი, რამდენ ხელს აიღებ (0 = პასი).",
+  "jk.bidding": "{name} აცხადებს…",
+  "jk.yourLeadPlay": "შენი სვლაა — ითამაშე ნებისმიერი ქაღალდი.",
+  "jk.followSuit": "მიჰყევი {suit}-ს თუ შეგიძლია, ან ითამაშე ჯოკერი.",
+  "jk.playCard": "ითამაშე ქაღალდი.",
+  "jk.waitingFor": "ველოდებით {name}-ს…",
+  "jk.matchOver": "თამაში დასრულდა.",
+  "jk.koziri": "კოზირი",
+  "jk.noTrump": "უკოზირო",
+  "jk.noTrumpShort": "უკოზირო",
+  "jk.lastTrickYouWon": "ბოლო ხელი · შენ მოიგე",
+  "jk.lastTrickWon": "ბოლო ხელი · {name}-მ მოიგო",
+  "jk.won": "მოიგო",
+  "jk.yourLead": "შენი სვლაა",
+  "jk.leads": "{name} იწყებს",
+  "jk.youLead": "შენ იწყებ",
+  "jk.biddingShort": "განაცხადი",
+  "jk.choosingTrumpShort": "კოზირის არჩევა",
+  "jk.led": "დაიდო",
+  "jk.calls": "ითხოვს",
+  "jk.said": "თქვა",
+  "jk.fill": "დარჩა {gap}",
+  "jk.full": "სრული",
+  "jk.jokerHelp": "მაღალი იგებს ხელს; დაბალი უშვებს{lead}.",
+  "jk.jokerHelpLead": ". ჯოკერით დაწყება ითხოვს ფერს, რომელსაც ყველა უნდა მიჰყვეს",
+  "jk.youSaid": "შენ თქვი",
+  "jk.took": "აიღო {n}",
+  "jk.pass": "პასი",
+  "jk.yourBid": "შენი განაცხადი",
+  "jk.cantSay": "სავალდებულო · არ შეიძლება {n}",
+  "jk.high": "მაღალი",
+  "jk.low": "დაბალი",
+  "jk.savaldebulo": "სავალდებულო — ოთხი განაცხადი ვერ ჯამდება ხელების რაოდენობასთან, ამიტომ ვიღაცამ უნდა აცდინოს",
+  "jk.scoresheet": "ანგარიში",
+  "jk.trump": "კოზირი",
+  "jk.cardDeal": "{n}-ქაღალდიანი დარიგება",
+  "jk.bids": "განაცხადი {a}/{b}",
+  "jk.now": "ახლა",
+  "jk.bid": "თქვა",
+  "jk.tookLbl": "აიღო",
+  "jk.dealer": "დ",
+  "jk.round": "რაუნდი {r} · დარიგება {n}/{total}",
+  "jk.chooseTrumpBtn": "აირჩიე კოზირი",
+  "jk.noCards": "ამ დარიგებაში ქაღალდი არ გაქვს.",
+  "jk.playJoker": "ითამაშე ჯოკერი",
+  "jk.highCall": "მაღალი — ითხოვს",
+  "jk.lowCall": "დაბალი — ითხოვს",
+  "jk.playHigh": "მაღალი ↑",
+  "jk.playLow": "დაბალი ↓",
+  "jk.highBtn": "მაღალი ▲",
+  "jk.lowBtn": "დაბალი ▼",
+  // suits
+  "suit.S": "პიკა",
+  "suit.H": "გული",
+  "suit.D": "ხაჩა",
+  "suit.C": "ჯვარი",
+};
+
+const messages: Record<Lang, Dict> = { en, ka };
+
+const STORAGE_KEY = "bordiko:lang";
+
+function detectLang(): Lang {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved === "en" || saved === "ka") return saved;
+  } catch {
+    /* localStorage unavailable */
+  }
+  try {
+    if (navigator.language?.toLowerCase().startsWith("ka")) return "ka";
+  } catch {
+    /* no navigator */
+  }
+  return "en";
+}
+
+interface I18n {
+  lang: Lang;
+  setLang: (l: Lang) => void;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}
+
+const I18nContext = createContext<I18n | null>(null);
+
+export function I18nProvider({ children }: { children: ReactNode }) {
+  const [lang, setLangState] = useState<Lang>(detectLang);
+
+  const setLang = useCallback((l: Lang) => {
+    setLangState(l);
+    try {
+      localStorage.setItem(STORAGE_KEY, l);
+    } catch {
+      /* ignore */
+    }
+    try {
+      document.documentElement.lang = l;
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const t = useCallback(
+    (key: string, vars?: Record<string, string | number>) => {
+      let s = messages[lang][key] ?? en[key] ?? key;
+      if (vars) {
+        for (const k of Object.keys(vars)) {
+          s = s.split("{" + k + "}").join(String(vars[k]));
+        }
+      }
+      return s;
+    },
+    [lang],
+  );
+
+  const value = useMemo(() => ({ lang, setLang, t }), [lang, setLang, t]);
+  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
+}
+
+export function useT(): I18n {
+  const ctx = useContext(I18nContext);
+  if (!ctx) throw new Error("useT must be used inside <I18nProvider>");
+  return ctx;
+}

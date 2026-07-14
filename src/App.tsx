@@ -9,6 +9,7 @@ import { Profile } from "./Profile.tsx";
 import { Leaderboard } from "./Leaderboard.tsx";
 import { fetchActive, leaveMatch, type ActiveMatch } from "./api.ts";
 import { gameMeta } from "./games.ts";
+import { useT, LANGS } from "./i18n.tsx";
 import type { Lobby } from "./wire.ts";
 
 
@@ -47,6 +48,7 @@ function pathToView(pathname: string): View {
 
 export function App() {
   const { user, loading, logout } = useAuth();
+  const { t } = useT();
   const [view, setView] = useState<View>(() => pathToView(window.location.pathname));
   const [active, setActive] = useState<ActiveMatch | null>(null);
   const [leavingActive, setLeavingActive] = useState(false);
@@ -100,29 +102,30 @@ export function App() {
               className={view.screen === "home" || view.screen === "waiting" || view.screen === "detail" ? "nav-link active" : "nav-link"}
               onClick={goHome}
             >
-              Play
+              {t("nav.play")}
             </button>
             <button
               className={view.screen === "leaderboard" ? "nav-link active" : "nav-link"}
               onClick={() => navigate({ screen: "leaderboard" })}
             >
-              Leaderboards
+              {t("nav.leaderboards")}
             </button>
             <button
               className={view.screen === "profile" ? "nav-link active" : "nav-link"}
               onClick={() => navigate({ screen: "profile" })}
             >
-              Profile
+              {t("nav.profile")}
             </button>
           </nav>
         )}
         <div className="user">
-          <button className="user-chip" onClick={() => navigate({ screen: "profile" })} title="Your profile">
+          <LangToggle />
+          <button className="user-chip" onClick={() => navigate({ screen: "profile" })} title={t("nav.yourProfile")}>
             {user.avatarUrl && <img src={user.avatarUrl} alt="" className="avatar" />}
             <span className="user-name">{user.displayName}</span>
           </button>
           <button className="ghost small" onClick={logout}>
-            Sign out
+            {t("nav.signout")}
           </button>
         </div>
       </header>
@@ -194,6 +197,27 @@ export function App() {
   );
 }
 
+// A compact EN / ქარ language switch in the topbar. The choice is persisted and
+// applies instantly across the app.
+function LangToggle() {
+  const { lang, setLang } = useT();
+  return (
+    <div className="lang-toggle" role="group" aria-label={useT().t("nav.language")}>
+      {LANGS.map((l) => (
+        <button
+          key={l.code}
+          className={l.code === lang ? "lang-btn active" : "lang-btn"}
+          onClick={() => setLang(l.code)}
+          title={l.long}
+          aria-pressed={l.code === lang}
+        >
+          {l.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // Shown whenever the user has an unfinished match they're not currently viewing:
 // one game at a time, so this is how they get back in — or bow out.
 function ResumeBanner({
@@ -207,16 +231,18 @@ function ResumeBanner({
   onResume: () => void;
   onLeave: () => void;
 }) {
+  const { t } = useT();
   const m = gameMeta(active.gameId ?? "");
+  const [before, after] = t("resume.text").split("{game}");
   return (
     <div className="resume-banner">
       <span className="resume-emoji" aria-hidden>{m.emoji}</span>
       <span className="resume-text">
-        You have a game of <strong>{m.name}</strong> in progress — you can only play one at a time.
+        {before}<strong>{m.name}</strong>{after}
       </span>
-      <button onClick={onResume}>Resume</button>
+      <button onClick={onResume}>{t("resume.resume")}</button>
       <button className="ghost danger" onClick={onLeave} disabled={leaving}>
-        {leaving ? "Leaving…" : "Leave"}
+        {leaving ? t("resume.leaving") : t("resume.leave")}
       </button>
     </div>
   );
