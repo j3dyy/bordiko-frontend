@@ -188,6 +188,12 @@ export function JokeriBoard({
   const { label: roundLabel } = roundOf(G.handIndex);
   const trumpLabel = G.trump ? null : "No trump";
 
+  // Between tricks (the live trick is empty and the sweep has finished) the just-
+  // completed trick RESTS in place on the felt — dimmed, the winner ringed — so
+  // everyone can still see what was played until the next card is led.
+  const restingLast = G.trick.length === 0 && !collect && (G.lastTrick?.length ?? 0) > 0;
+  const feltCards: TrickCard[] = G.trick.length > 0 ? G.trick : restingLast ? G.lastTrick : [];
+
   const hint = state.ended
     ? "Match over."
     : G.phase === "trump"
@@ -265,9 +271,10 @@ export function JokeriBoard({
             )}
 
             {(["north", "east", "south", "west"] as const).map((dir) => {
-              const t = G.trick.find((tc) => compassOf(tc.player) === dir);
+              const t = feltCards.find((tc) => compassOf(tc.player) === dir);
+              const won = restingLast && !!t && t.player === G.lastTrickWinner;
               return (
-                <div key={dir} className={`jk-play ${dir} ${t ? "on" : ""}`}>
+                <div key={dir} className={`jk-play ${dir} ${t ? "on" : ""} ${restingLast ? "resting" : ""} ${won ? "won" : ""}`}>
                   {t && <PlayCard c={t.card} mode={t.jokerMode} size={80} />}
                 </div>
               );
@@ -285,7 +292,7 @@ export function JokeriBoard({
               </div>
             )}
 
-            {G.trick.length === 0 && !collect && (
+            {G.trick.length === 0 && !collect && !restingLast && (
               <div className="jk-felt-empty">
                 {G.phase === "play"
                   ? `${G.leader === me ? "You lead" : `${nameOf(G.leader)} leads`}`
@@ -295,6 +302,10 @@ export function JokeriBoard({
                       ? "choosing trump"
                       : "—"}
               </div>
+            )}
+            {/* whose lead it is now, shown under the resting trick */}
+            {restingLast && G.phase === "play" && (
+              <div className="jk-felt-lead">{G.leader === me ? "Your lead" : `${nameOf(G.leader)} leads`}</div>
             )}
             {G.calledSuit && G.phase === "play" && (() => {
               const lead = G.trick.find((t) => t.player === G.leader);
@@ -310,8 +321,10 @@ export function JokeriBoard({
               );
             })()}
 
-            {/* the previous (completed) trick, always reviewable during the hand */}
-            {G.lastTrick?.length > 0 && (
+            {/* a compact review of the previous trick — shown only while a NEW
+                trick is in progress; between tricks the full trick rests on the
+                felt (above) instead, so this doesn't duplicate it. */}
+            {G.lastTrick?.length > 0 && G.trick.length > 0 && (
               <div className="jk-lasttrick">
                 <span className="jk-lt-lbl">
                   last trick · {G.lastTrickWinner === me ? "you won" : `${nameOf(G.lastTrickWinner ?? "")} won`}

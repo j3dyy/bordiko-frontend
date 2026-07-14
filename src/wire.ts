@@ -85,6 +85,7 @@ export interface Providers {
 export interface LobbyPlayer {
   id: string;
   name: string;
+  bot?: boolean; // a computer player the host added to fill a seat
 }
 
 // One place at the table. `team` is the partnership id: in "teams" mode partners

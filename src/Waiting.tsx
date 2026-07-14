@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { cancelLobby, getLobby, sitSeat, standSeat, startLobby } from "./api.ts";
+import { addBot, cancelLobby, getLobby, removeBot, sitSeat, standSeat, startLobby } from "./api.ts";
 import { gameMeta } from "./games.ts";
 import { TEAM_COLORS } from "./TableSetup.tsx";
 import { lobbyFull, seatedCount } from "./wire.ts";
@@ -99,6 +99,8 @@ export function Waiting({
   const sit = (i: number) => run(() => sitSeat(current.id, i, pwd));
   const stand = () => run(() => standSeat(current.id));
   const start = () => run(() => startLobby(current.id));
+  const addBotAt = (i: number) => run(() => addBot(current.id, i));
+  const removeBotAt = (i: number) => run(() => removeBot(current.id, i));
 
   const inviteUrl = `${window.location.origin}/waiting/${current.id}`;
   async function copyInvite() {
@@ -165,9 +167,12 @@ export function Waiting({
               mode={current.mode}
               hostId={current.host}
               myId={myId}
+              isHost={isHost}
               seatedElsewhere={seated && mySeat !== s.index}
               disabled={acting}
               onSit={() => sit(s.index)}
+              onAddBot={() => addBotAt(s.index)}
+              onRemoveBot={() => removeBotAt(s.index)}
             />
           ))}
 
@@ -229,18 +234,24 @@ function SeatView({
   mode,
   hostId,
   myId,
+  isHost,
   seatedElsewhere,
   disabled,
   onSit,
+  onAddBot,
+  onRemoveBot,
 }: {
   seat: Seat;
   total: number;
   mode: "solo" | "teams";
   hostId: string;
   myId: string;
+  isHost: boolean;
   seatedElsewhere: boolean;
   disabled: boolean;
   onSit: () => void;
+  onAddBot: () => void;
+  onRemoveBot: () => void;
 }) {
   // Seat 0 at the top, going clockwise.
   const angle = (seat.index / total) * 2 * Math.PI - Math.PI / 2;
@@ -255,21 +266,28 @@ function SeatView({
   };
   const p = seat.player;
   const isMe = p?.id === myId;
-  const isHost = p?.id === hostId;
+  const seatIsHost = p?.id === hostId;
+  const isBotSeat = !!p?.bot;
 
   return (
-    <div className={`seat${p ? " filled" : " empty"}${teamColor ? " teamed" : ""}${isMe ? " me" : ""}`} style={style}>
+    <div className={`seat${p ? " filled" : " empty"}${teamColor ? " teamed" : ""}${isMe ? " me" : ""}${isBotSeat ? " bot" : ""}`} style={style}>
       {mode === "teams" && (
         <span className="seat-team">{seat.team === 0 ? "A" : "B"}</span>
       )}
       {p ? (
         <>
-          <span className="seat-avatar">{(p.name.trim()[0] ?? "?").toUpperCase()}</span>
+          <span className="seat-avatar">{isBotSeat ? "🤖" : (p.name.trim()[0] ?? "?").toUpperCase()}</span>
           <span className="seat-name">{p.name}</span>
           <span className="seat-badges">
-            {isHost && <span className="seat-badge host">Host</span>}
+            {seatIsHost && <span className="seat-badge host">Host</span>}
             {isMe && <span className="seat-badge you">You</span>}
+            {isBotSeat && <span className="seat-badge botbadge">Bot</span>}
           </span>
+          {isBotSeat && isHost && (
+            <button className="seat-rmbot" disabled={disabled} onClick={onRemoveBot}>
+              Remove
+            </button>
+          )}
         </>
       ) : (
         <>
@@ -277,6 +295,11 @@ function SeatView({
           <button className="seat-sit" disabled={disabled} onClick={onSit}>
             {seatedElsewhere ? "Move here" : "Sit here"}
           </button>
+          {isHost && (
+            <button className="seat-addbot" disabled={disabled} onClick={onAddBot}>
+              ＋ Add bot
+            </button>
+          )}
         </>
       )}
     </div>

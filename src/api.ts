@@ -166,6 +166,30 @@ export async function standSeat(id: string): Promise<Lobby> {
   );
 }
 
+// Host-only: fill an empty seat with a computer player.
+export async function addBot(id: string, seat: number): Promise<Lobby> {
+  return json<Lobby>(
+    await req(`/api/lobby/${encodeURIComponent(id)}/addbot`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ seat }),
+    }),
+    "addBot",
+  );
+}
+
+// Host-only: remove a bot from its seat.
+export async function removeBot(id: string, seat: number): Promise<Lobby> {
+  return json<Lobby>(
+    await req(`/api/lobby/${encodeURIComponent(id)}/removebot`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ seat }),
+    }),
+    "removeBot",
+  );
+}
+
 // Host-only: begin the match once every seat is filled.
 export async function startLobby(id: string): Promise<Lobby> {
   return json<Lobby>(
