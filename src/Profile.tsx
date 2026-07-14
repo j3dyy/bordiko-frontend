@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchCatalog, fetchLeaderboard, setUsername } from "./api.ts";
 import { useAuth } from "./auth.tsx";
+import { useT } from "./i18n.tsx";
 import { gameMeta } from "./games.ts";
 import type { LeaderRow, User } from "./wire.ts";
 
@@ -26,6 +27,7 @@ export function Profile({
   const [nameInput, setNameInput] = useState(user.displayName);
   const [savingName, setSavingName] = useState(false);
   const [nameErr, setNameErr] = useState("");
+  const { t } = useT();
 
   async function saveName() {
     const name = nameInput.trim();
@@ -79,7 +81,7 @@ export function Profile({
 
   return (
     <div className="profile">
-      <button className="back" onClick={onBack}>← Discover</button>
+      <button className="back" onClick={onBack}>{t("detail.back")}</button>
 
       <section className="profile-head">
         {user.avatarUrl ? (
@@ -102,35 +104,35 @@ export function Profile({
                 aria-label="display name"
               />
               <button onClick={() => void saveName()} disabled={savingName}>
-                {savingName ? "Saving…" : "Save"}
+                {savingName ? t("profile.saving") : t("profile.save")}
               </button>
               <button className="ghost" onClick={() => { setEditing(false); setNameInput(user.displayName); setNameErr(""); }} disabled={savingName}>
-                Cancel
+                {t("common.cancel")}
               </button>
             </div>
           ) : (
             <h1 className="profile-name">
               {user.displayName}
               <button className="name-edit-btn" onClick={() => { setNameInput(user.displayName); setEditing(true); }}>
-                ✎ Edit name
+                {t("profile.editName")}
               </button>
             </h1>
           )}
           {nameErr && <div className="error">{nameErr}</div>}
-          <div className="profile-provider">{providerLabel(user.id)}</div>
+          <div className="profile-provider">{t(`profile.${user.id.split(":")[0]}`, undefined, providerLabel(user.id))}</div>
         </div>
         <div className="profile-totals">
-          <div className="stat-tile"><div className="stat-num">{stats.length}</div><div className="stat-lbl">games</div></div>
-          <div className="stat-tile"><div className="stat-num">{totals.games.toLocaleString()}</div><div className="stat-lbl">matches</div></div>
-          <div className="stat-tile"><div className="stat-num">{totals.games ? `${totals.winPct}%` : "—"}</div><div className="stat-lbl">win rate</div></div>
+          <div className="stat-tile"><div className="stat-num">{stats.length}</div><div className="stat-lbl">{t("profile.games")}</div></div>
+          <div className="stat-tile"><div className="stat-num">{totals.games.toLocaleString()}</div><div className="stat-lbl">{t("profile.matches")}</div></div>
+          <div className="stat-tile"><div className="stat-num">{totals.games ? `${totals.winPct}%` : "—"}</div><div className="stat-lbl">{t("profile.winRate")}</div></div>
         </div>
       </section>
 
-      <h3 className="section-title">Your games</h3>
+      <h3 className="section-title">{t("profile.yourGames")}</h3>
       {loading ? (
-        <p className="hint">Loading your stats…</p>
+        <p className="hint">{t("profile.loadingStats")}</p>
       ) : stats.length === 0 ? (
-        <p className="hint">You haven’t finished a ranked match yet. Play a game and your ranking shows up here.</p>
+        <p className="hint">{t("profile.noStats")}</p>
       ) : (
         <div className="profile-games">
           {stats.map((s) => {
@@ -141,7 +143,7 @@ export function Profile({
                 <span className="pg-emoji">{m.emoji}</span>
                 <div className="pg-info">
                   <div className="pg-name">{m.name}</div>
-                  <div className="pg-record">{s.wins}W · {s.losses}L · {s.draws}D</div>
+                  <div className="pg-record">{t("profile.record", { w: s.wins, l: s.losses, d: s.draws })}</div>
                 </div>
                 <div className="pg-nums">
                   <div className="pg-rating">{s.rating}</div>

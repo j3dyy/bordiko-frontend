@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { fetchMyRating, rateGame } from "./api.ts";
+import { useT } from "./i18n.tsx";
 
 // A 5-star rater for a game. One rating per user (the server upserts); posting
 // again just updates it. Loads the user's existing rating so it shows filled in.
 // Used on the live game screen and the game-detail page.
 export function RateBar({ gameId, name }: { gameId: string; name: string }) {
+  const { t } = useT();
   const [mine, setMine] = useState(0);
   const [hover, setHover] = useState(0);
   const [rated, setRated] = useState(false);
@@ -41,7 +43,7 @@ export function RateBar({ gameId, name }: { gameId: string; name: string }) {
   const shown = hover || mine;
   return (
     <div className="ratebar">
-      <span className="ratebar-label">{rated ? `You rated ${name} ${mine}★` : `Enjoying ${name}? Rate it`}</span>
+      <span className="ratebar-label">{rated ? t("rate.youRated", { name, stars: mine }) : t("rate.enjoying", { name })}</span>
       <div className="ratebar-stars" onMouseLeave={() => setHover(0)}>
         {[1, 2, 3, 4, 5].map((n) => (
           <button

@@ -221,6 +221,57 @@ const en: Dict = {
   "suit.H": "Hearts",
   "suit.D": "Diamonds",
   "suit.C": "Clubs",
+  // discover / home
+  "home.searchPlaceholder": "Search {n} games, creators, tags…",
+  "home.allGames": "All games",
+  "home.noMatch": "No games match “{q}”.",
+  "home.featured": "Featured",
+  "home.playNow": "▶ Play now",
+  "home.newTable": "New table",
+  "home.creating": "Creating…",
+  "home.plays": "{n} plays",
+  "home.live": "● {n} live",
+  "home.new": "New",
+  "home.topPlayers": "Top players",
+  "home.noRanked": "No ranked games yet.",
+  "home.liveNow": "Live now",
+  "home.noTables": "No open tables. Start one to play.",
+  "home.teams": "teams",
+  "home.join": "Join",
+  "home.seatsHost": "{seated}/{total} seats · {host}",
+  "home.playersMeta": "{author} · {players} players · {plays} plays",
+  "home.alreadyInGame": "You’re already in a game of {game} — resume or leave it from the banner at the top.",
+  "home.emptyCatalog": "No games in the marketplace yet.",
+  // game detail
+  "detail.back": "← Discover",
+  "detail.verified": "verified",
+  "detail.by": "by",
+  "detail.ratings": "{n} ratings",
+  "detail.unrated": "unrated",
+  "detail.players": "players",
+  "detail.playsLbl": "plays",
+  "detail.liveTables": "live tables",
+  "detail.howToPlay": "How to play",
+  "detail.goal": "Goal —",
+  "detail.leaderboard": "Leaderboard",
+  "detail.noRanked": "No ranked games yet — be the first to top the ladder.",
+  // profile
+  "profile.saving": "Saving…",
+  "profile.save": "Save",
+  "profile.editName": "✎ Edit name",
+  "profile.games": "games",
+  "profile.matches": "matches",
+  "profile.winRate": "win rate",
+  "profile.yourGames": "Your games",
+  "profile.loadingStats": "Loading your stats…",
+  "profile.noStats": "You haven’t finished a ranked match yet. Play a game and your ranking shows up here.",
+  "profile.google": "Google account",
+  "profile.github": "GitHub account",
+  "profile.dev": "Guest (dev)",
+  "profile.record": "{w}W · {l}L · {d}D",
+  // rate bar
+  "rate.youRated": "You rated {name} {stars}★",
+  "rate.enjoying": "Enjoying {name}? Rate it",
 };
 
 const ka: Dict = {
@@ -430,6 +481,74 @@ const ka: Dict = {
   "suit.H": "გული",
   "suit.D": "ხაჩა",
   "suit.C": "ჯვარი",
+  // discover / home
+  "home.searchPlaceholder": "მოძებნე {n} თამაში, შემქმნელი, ტეგი…",
+  "home.allGames": "ყველა თამაში",
+  "home.noMatch": "ვერაფერი მოიძებნა „{q}“-ზე.",
+  "home.featured": "რჩეული",
+  "home.playNow": "▶ თამაში",
+  "home.newTable": "ახალი მაგიდა",
+  "home.creating": "იქმნება…",
+  "home.plays": "{n} თამაში",
+  "home.live": "● {n} ცოცხლად",
+  "home.new": "ახალი",
+  "home.topPlayers": "საუკეთესო მოთამაშეები",
+  "home.noRanked": "რეიტინგული თამაშები ჯერ არ არის.",
+  "home.liveNow": "ახლა ცოცხლად",
+  "home.noTables": "ღია მაგიდები არ არის. დაიწყე ერთი სათამაშოდ.",
+  "home.teams": "გუნდები",
+  "home.join": "შეერთება",
+  "home.seatsHost": "{seated}/{total} ადგილი · {host}",
+  "home.playersMeta": "{author} · {players} მოთამაშე · {plays} თამაში",
+  "home.alreadyInGame": "შენ უკვე თამაშობ {game}-ს — გააგრძელე ან დატოვე ის ზემოთ ბანერიდან.",
+  "home.emptyCatalog": "მარკეტზე ჯერ თამაშები არ არის.",
+  // game detail
+  "detail.back": "← აღმოაჩინე",
+  "detail.verified": "დადასტურებული",
+  "detail.by": "ავტორი:",
+  "detail.ratings": "{n} შეფასება",
+  "detail.unrated": "შეუფასებელი",
+  "detail.players": "მოთამაშე",
+  "detail.playsLbl": "თამაში",
+  "detail.liveTables": "ცოცხალი მაგიდა",
+  "detail.howToPlay": "როგორ ვითამაშო",
+  "detail.goal": "მიზანი —",
+  "detail.leaderboard": "ლიდერბორდი",
+  "detail.noRanked": "რეიტინგული თამაშები ჯერ არ არის — იყავი პირველი ცხრილის სათავეში.",
+  // profile
+  "profile.saving": "ინახება…",
+  "profile.save": "შენახვა",
+  "profile.editName": "✎ სახელის შეცვლა",
+  "profile.games": "თამაში",
+  "profile.matches": "მატჩი",
+  "profile.winRate": "მოგების %",
+  "profile.yourGames": "შენი თამაშები",
+  "profile.loadingStats": "სტატისტიკა იტვირთება…",
+  "profile.noStats": "ჯერ არცერთი რეიტინგული მატჩი არ დაგისრულებია. ითამაშე და შენი რეიტინგი აქ გამოჩნდება.",
+  "profile.google": "Google ანგარიში",
+  "profile.github": "GitHub ანგარიში",
+  "profile.dev": "სტუმარი (dev)",
+  "profile.record": "{w}მ · {l}წ · {d}ფ",
+  // rate bar
+  "rate.youRated": "შენ შეაფასე {name} {stars}★",
+  "rate.enjoying": "მოგწონს {name}? შეაფასე",
+  // categories (fallback = English from games.ts)
+  "cat.Card Game": "ბანქოს თამაში",
+  "cat.Dice": "კამათელი",
+  "cat.Abstract": "აბსტრაქტული",
+  "cat.Hex & Area": "ჰექსი და ტერიტორია",
+  "cat.Community": "სათემო",
+  // game blurbs / objectives (ka only; English comes from games.ts via fallback)
+  "gm.hive.blurb": "ალყაში მოაქციე მოწინააღმდეგის დედოფალი. მწერები მზარდ ექვსკუთხა მოზაიკაზე — დაფისა და კამათლის გარეშე.",
+  "gm.hive.objective": "პირველმა მოაქციე ალყაში მოწინააღმდეგის დედოფალი ფუტკარი ექვსივე მხრიდან.",
+  "gm.eights.blurb": "დააგდე ხელი რანგის ან ფერის დამთხვევით. რვიანები ჯოკერებია. დამალული ხელები.",
+  "gm.eights.objective": "პირველმა დაასრულე შენი ხელი.",
+  "gm.king-of-tokyo.blurb": "ააგორე კამათლები, დაიკავე ტოკიო, გაანადგურე მეტოქეები. სამ გაგორებაში სცადე ბედი.",
+  "gm.king-of-tokyo.objective": "დააგროვე 20 ქულა — ან დარჩი ბოლო ცოცხალ ურჩხულად.",
+  "gm.jokeri.blurb": "განაცხადე ხელები და აიღე ზუსტად რამდენიც თქვი. ორი შავი ექვსიანი — ჯოკერები — მართავს დასტას. ითამაშე მარტო ან წყვილებში.",
+  "gm.jokeri.objective": "დააგროვე ყველაზე მეტი ქულა მატჩში — განაცხადე ხელები და აიღე ზუსტად რამდენიც თქვი — პარტნიორთან ერთად ან შენთვის.",
+  "gm.tic-tac-toe.blurb": "კლასიკა. სამი ზედიზედ.",
+  "gm.tic-tac-toe.objective": "დააწყვე შენი სამი ნიშანი ზედიზედ.",
 };
 
 const messages: Record<Lang, Dict> = { en, ka };
@@ -454,7 +573,10 @@ function detectLang(): Lang {
 interface I18n {
   lang: Lang;
   setLang: (l: Lang) => void;
-  t: (key: string, vars?: Record<string, string | number>) => string;
+  // `fallback` (e.g. English text that lives in a data file like games.ts) is used
+  // when the current language has no entry for `key` — so un-translated catalog
+  // content shows its original English rather than a raw key.
+  t: (key: string, vars?: Record<string, string | number>, fallback?: string) => string;
 }
 
 const I18nContext = createContext<I18n | null>(null);
@@ -477,8 +599,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const t = useCallback(
-    (key: string, vars?: Record<string, string | number>) => {
-      let s = messages[lang][key] ?? en[key] ?? key;
+    (key: string, vars?: Record<string, string | number>, fallback?: string) => {
+      let s = messages[lang][key] ?? fallback ?? en[key] ?? key;
       if (vars) {
         for (const k of Object.keys(vars)) {
           s = s.split("{" + k + "}").join(String(vars[k]));

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createLobby, fetchCatalog, fetchLeaderboard, joinLobby, listLobbies } from "./api.ts";
 import { friendlyName, gameMeta, playersLabel } from "./games.ts";
+import { useT } from "./i18n.tsx";
 import { TableSetup } from "./TableSetup.tsx";
 import { seatedCount } from "./wire.ts";
 import type { CatalogGame, LeaderRow, Lobby } from "./wire.ts";
@@ -16,6 +17,7 @@ export function Home({
   onOpen: (gameId: string) => void;
   onBlocked?: () => void;
 }) {
+  const { t } = useT();
   const [catalog, setCatalog] = useState<CatalogGame[]>([]);
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
   const [search, setSearch] = useState("");
@@ -53,7 +55,7 @@ export function Home({
     const active = (e as { active?: { matchId: string; gameId: string } }).active;
     if (active) {
       const g = gameMeta(active.gameId);
-      setErr(`You're already in a game of ${g.name} — resume or leave it from the banner at the top.`);
+      setErr(t("home.alreadyInGame", { game: g.name }));
       onBlocked?.();
       return true;
     }
@@ -120,7 +122,7 @@ export function Home({
     return (
       <div className="discover">
         <p className="hint">
-          No games in the marketplace yet. Publish one with{" "}
+          {t("home.emptyCatalog")}{" "}
           <code>REGISTRY=… node tools/publish.mjs games/&lt;id&gt;</code>.
         </p>
       </div>
@@ -136,18 +138,18 @@ export function Home({
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder={`Search ${catalog.length} game${catalog.length === 1 ? "" : "s"}, creators, tags…`}
+          placeholder={t("home.searchPlaceholder", { n: catalog.length })}
           aria-label="search games"
         />
       </div>
 
       <div className="chips">
         <button className={category === "" ? "chip active" : "chip"} onClick={() => setCategory("")}>
-          All games
+          {t("home.allGames")}
         </button>
         {categories.map((c) => (
           <button key={c} className={category === c ? "chip active" : "chip"} onClick={() => setCategory(category === c ? "" : c)}>
-            {c}
+            {t(`cat.${c}`, undefined, c)}
           </button>
         ))}
       </div>
@@ -156,9 +158,9 @@ export function Home({
 
       <div className="discover-cols">
         <div className="discover-main">
-          <h2 className="section-title">{category || "All games"}</h2>
+          <h2 className="section-title">{category ? t(`cat.${category}`, undefined, category) : t("home.allGames")}</h2>
           {filtered.length === 0 ? (
-            <p className="hint">No games match “{search}”.</p>
+            <p className="hint">{t("home.noMatch", { q: search })}</p>
           ) : (
             <div className="catalog">
               {filtered.map((c) => (
@@ -192,7 +194,8 @@ export function Home({
 /* -------------------------------- pieces ---------------------------------- */
 
 function Stars({ rating, count }: { rating: number; count: number }) {
-  if (count === 0) return <span className="gc-unrated">New</span>;
+  const { t } = useT();
+  if (count === 0) return <span className="gc-unrated">{t("home.new")}</span>;
   return (
     <span className="gc-rating" title={`${rating.toFixed(2)} from ${count} rating${count === 1 ? "" : "s"}`}>
       <span className="star">★</span> {rating.toFixed(1)} <span className="gc-count">({count.toLocaleString()})</span>
@@ -201,6 +204,7 @@ function Stars({ rating, count }: { rating: number; count: number }) {
 }
 
 function GameCard({ game, busy, onCreate, onOpen }: { game: CatalogGame; busy: boolean; onCreate: () => void; onOpen: () => void }) {
+  const { t } = useT();
   const m = gameMeta(game.id);
   return (
     <article className="game-card" style={{ ["--accent" as string]: m.accent }}>
@@ -208,7 +212,7 @@ function GameCard({ game, busy, onCreate, onOpen }: { game: CatalogGame; busy: b
         onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onOpen()}>
         <div className="gc-top">
           <div className="game-emoji">{m.emoji}</div>
-          <span className="cat-pill">{m.category}</span>
+          <span className="cat-pill">{t(`cat.${m.category}`, undefined, m.category)}</span>
         </div>
         <div className="gc-body">
           <h3 className="gc-title">
@@ -216,35 +220,36 @@ function GameCard({ game, busy, onCreate, onOpen }: { game: CatalogGame; busy: b
             {m.verified && <span className="verified" title="Verified creator">✓</span>}
           </h3>
           <div className="gc-creator">{m.author}</div>
-          <p className="gc-blurb">{m.blurb}</p>
+          <p className="gc-blurb">{t(`gm.${game.id}.blurb`, undefined, m.blurb)}</p>
         </div>
         <div className="gc-stats">
           <Stars rating={game.rating} count={game.ratingCount} />
-          <span className="gc-plays">{game.plays.toLocaleString()} plays</span>
-          {game.live > 0 && <span className="gc-live">● {game.live} live</span>}
+          <span className="gc-plays">{t("home.plays", { n: game.plays.toLocaleString() })}</span>
+          {game.live > 0 && <span className="gc-live">{t("home.live", { n: game.live })}</span>}
         </div>
       </div>
       <button disabled={busy} onClick={onCreate}>
-        {busy ? "Creating…" : "New table"}
+        {busy ? t("home.creating") : t("home.newTable")}
       </button>
     </article>
   );
 }
 
 function Featured({ game, busy, onPlay }: { game: CatalogGame; busy: boolean; onPlay: () => void }) {
+  const { t } = useT();
   const m = gameMeta(game.id);
   return (
     <section className="featured" style={{ ["--accent" as string]: m.accent }}>
       <div className="featured-info">
-        <span className="featured-eyebrow">Featured</span>
+        <span className="featured-eyebrow">{t("home.featured")}</span>
         <h2 className="featured-title">{m.name}</h2>
-        <p className="featured-blurb">{m.blurb}</p>
+        <p className="featured-blurb">{t(`gm.${game.id}.blurb`, undefined, m.blurb)}</p>
         <div className="featured-cta">
           <button disabled={busy} onClick={onPlay}>
-            {busy ? "Creating…" : "▶ Play now"}
+            {busy ? t("home.creating") : t("home.playNow")}
           </button>
           <span className="featured-meta">
-            {m.author} · {playersLabel(m)} players · {game.plays.toLocaleString()} plays
+            {t("home.playersMeta", { author: m.author, players: playersLabel(m), plays: game.plays.toLocaleString() })}
             {game.ratingCount > 0 && <> · ★ {game.rating.toFixed(1)}</>}
           </span>
         </div>
@@ -255,6 +260,7 @@ function Featured({ game, busy, onPlay }: { game: CatalogGame; busy: boolean; on
 }
 
 function TopPlayers({ gameId }: { gameId: string }) {
+  const { t } = useT();
   const [rows, setRows] = useState<LeaderRow[]>([]);
   useEffect(() => {
     let live = true;
@@ -269,11 +275,11 @@ function TopPlayers({ gameId }: { gameId: string }) {
   return (
     <div className="rail-card">
       <div className="rail-head">
-        <h4>Top players</h4>
+        <h4>{t("home.topPlayers")}</h4>
         <span className="rail-tag">{gameMeta(gameId).name}</span>
       </div>
       {rows.length === 0 ? (
-        <p className="hint">No ranked games yet.</p>
+        <p className="hint">{t("home.noRanked")}</p>
       ) : (
         <ol className="rail-ranks">
           {rows.map((r, i) => (
@@ -295,14 +301,15 @@ function TopPlayers({ gameId }: { gameId: string }) {
 }
 
 function LiveNow({ lobbies, busy, onJoin }: { lobbies: Lobby[]; busy: string; onJoin: (l: Lobby) => void }) {
+  const { t } = useT();
   return (
     <div className="rail-card">
       <div className="rail-head">
         <span className="live-dot" />
-        <h4>Live now</h4>
+        <h4>{t("home.liveNow")}</h4>
       </div>
       {lobbies.length === 0 ? (
-        <p className="hint">No open tables. Start one to play.</p>
+        <p className="hint">{t("home.noTables")}</p>
       ) : (
         <div className="live-list">
           {lobbies.map((l) => {
@@ -315,14 +322,14 @@ function LiveNow({ lobbies, busy, onJoin }: { lobbies: Lobby[]; busy: string; on
                 <div className="live-meta">
                   <div className="live-game">
                     {m.name}
-                    {l.mode === "teams" && <span className="live-mode">teams</span>}
+                    {l.mode === "teams" && <span className="live-mode">{t("home.teams")}</span>}
                   </div>
                   <div className="live-seats">
-                    {seatedCount(l)}/{seats.length} seats · {hostName}
+                    {t("home.seatsHost", { seated: seatedCount(l), total: seats.length, host: hostName })}
                   </div>
                 </div>
                 <button className="small" disabled={busy === l.id} onClick={() => onJoin(l)}>
-                  {busy === l.id ? "…" : "Join"}
+                  {busy === l.id ? "…" : t("home.join")}
                 </button>
               </div>
             );
