@@ -104,6 +104,26 @@ const KNOWN: Record<string, Omit<GameMeta, "id">> = {
       "Make your bid exactly to score big; miss it and you only score 10 per trick; bid but take nothing and you're 'khisht' (a penalty). The match runs four rounds; highest total (team or player) wins.",
     ],
   },
+  avalon: {
+    name: "Avalon",
+    blurb: "Hidden loyalties, secret quests. Merlin knows the evil; the Assassin hunts Merlin. Talk, deduce, and don't get found out.",
+    minPlayers: 5,
+    maxPlayers: 10,
+    renderer: "auto", // rendered by the generic SchemaBoard from the game's BoardView
+    accent: "#4429A3",
+    emoji: "🛡️",
+    category: "Social",
+    author: "@bordiko",
+    verified: true,
+    objective: "As a loyal servant of Arthur, succeed on three quests without revealing Merlin. As a minion of Mordred, sabotage three quests — or find and assassinate Merlin at the end.",
+    howTo: [
+      "Everyone gets a secret role: good (loyal servants, incl. Merlin) or evil (minions, incl. the Assassin). Merlin secretly sees the evil players; the evil players know each other.",
+      "Each round the leader proposes a team for the quest, and everyone votes to approve or reject it. Five rejections in a row hands the round to evil.",
+      "On an approved quest, team members secretly play Success or Fail — the good must play Success, evil may sabotage. One Fail usually fails the quest (two on the 4th quest with 7+ players).",
+      "Good wins by succeeding on three quests; evil wins by failing three.",
+      "If good succeeds three times, the Assassin gets one guess at Merlin — guess right and evil steals the win. So Merlin must guide without being spotted.",
+    ],
+  },
   "tic-tac-toe": {
     name: "Tic-Tac-Toe",
     blurb: "The classic. Three in a row.",
