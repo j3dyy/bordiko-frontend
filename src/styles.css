@@ -73,12 +73,19 @@ h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.01em; }
 
 /* --------------------------------- buttons -------------------------------- */
 
+/* The default button is the purple primary. `button:hover` is (0,2,1), which
+   outranks any component class (0,1,0) — so a button that gives itself another
+   background WILL still be repainted purple on hover, keeping its own (dark)
+   text and going unreadable. That has bitten .brand, .fmt, .seg-btn and the
+   Jokeri bid row.
+   So the fill is a variable: if you give a button its own background, set
+   --btn-fill-hover next to it and the hover state follows. */
 button {
-  background: var(--brand); color: #fff; border: 0; border-radius: 12px;
+  background: var(--btn-fill, var(--brand)); color: #fff; border: 0; border-radius: 12px;
   padding: 10px 18px; font-family: var(--font-display); font-weight: 600; font-size: 14px;
   cursor: pointer; transition: background 0.15s ease, transform 0.05s ease, box-shadow 0.15s ease;
 }
-button:hover:not(:disabled) { background: var(--brand-600); }
+button:hover:not(:disabled) { background: var(--btn-fill-hover, var(--brand-600)); }
 button:active:not(:disabled) { transform: translateY(1px); }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 button.ghost {
@@ -272,16 +279,24 @@ code { font-family: var(--font-mono); }
 .seg-btn {
   min-width: 46px; background: var(--card); color: var(--text); border: 1.5px solid var(--line-2);
   border-radius: 11px; padding: 10px 16px; font-weight: 700; text-align: center;
+  --btn-fill-hover: var(--tint-purple-2);
 }
 .seg-btn.active { background: var(--accent, var(--brand)); color: #fff; border-color: transparent; }
+/* Selected: hover deepens the fill and the text stays white. */
+.seg-btn.active { --btn-fill-hover: var(--brand-600); }
 .seg-btn:hover:not(.active) { border-color: var(--accent, var(--brand)); color: var(--accent, var(--brand)); }
 
 .ts-formats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .fmt {
   display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left;
   background: var(--card); color: var(--text); border: 1.5px solid var(--line-2); border-radius: 14px; padding: 12px 14px;
+  --btn-fill-hover: var(--tint-purple-2);
 }
+.fmt:hover:not(:disabled) { border-color: var(--brand-200); }
 .fmt.active { border-color: var(--accent, var(--brand)); background: var(--tint-purple-2); box-shadow: 0 0 0 3px var(--tint-purple); }
+/* Already selected: hover deepens the tint rather than flattening it. */
+.fmt.active { --btn-fill-hover: var(--tint-purple); }
+.fmt.active:hover:not(:disabled) { border-color: var(--accent, var(--brand)); }
 .fmt-title { font-weight: 700; font-size: 14px; }
 .fmt-sub { font-family: var(--font-body); font-weight: 400; font-size: 11.5px; color: var(--muted); }
 
@@ -442,7 +457,7 @@ code { font-family: var(--font-mono); }
 .turn.you { color: var(--brand); font-weight: 600; }
 .result { color: var(--brand-700); font-family: var(--font-display); font-weight: 700; }
 .statusbar-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
-.sound-toggle { background: var(--panel); border: 1px solid var(--line-2); border-radius: 10px; padding: 5px 9px; font-size: 15px; line-height: 1; cursor: pointer; }
+.sound-toggle { background: var(--panel); border: 1px solid var(--line-2); border-radius: 10px; padding: 5px 9px; font-size: 15px; line-height: 1; cursor: pointer; --btn-fill-hover: var(--tint-purple-2); }
 .sound-toggle:hover { border-color: var(--brand); }
 
 /* per-turn countdown */
@@ -474,10 +489,12 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 /* profile: editable display name */
 .name-edit-btn {
   background: var(--tint-purple); border: 1px solid transparent; color: var(--brand);
+  --btn-fill-hover: var(--tint-purple);
   font-family: var(--font-mono); font-size: 12px; font-weight: 600; padding: 4px 10px; margin-left: 12px;
   border-radius: 999px; cursor: pointer; vertical-align: middle;
 }
-.name-edit-btn:hover:not(:disabled) { border-color: var(--brand); }
+/* 12px text, so it needs the full 4.5:1 — --brand only reaches 4.28 on the tint. */
+.name-edit-btn:hover:not(:disabled) { border-color: var(--brand); color: var(--brand-600); }
 .name-edit { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .name-edit input {
   font-size: 20px; font-family: var(--font-display); font-weight: 700; padding: 5px 10px;
@@ -1077,11 +1094,14 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 .jk-suit-row { display: flex; align-items: center; gap: 8px; }
 .jk-suit-btn { background: var(--panel); border: 1.5px solid var(--line-2); border-radius: 12px; padding: 8px; line-height: 0; }
 .jk-suit-btn:hover:not(:disabled) { border-color: var(--brand); background: var(--tint-purple-2); }
-.jk-nt-btn { background: var(--card); color: var(--text); border: 1.5px solid var(--line-2); }
+.jk-nt-btn { background: var(--card); color: var(--text); border: 1.5px solid var(--line-2); --btn-fill-hover: var(--tint-purple-2); }
+.jk-nt-btn:hover:not(:disabled) { border-color: var(--brand); color: var(--brand); }
 .jk-bid-row { display: flex; gap: 6px; flex-wrap: wrap; }
-.jk-bid-btn { min-width: 40px; background: var(--card); color: var(--text); border: 1.5px solid var(--line-2); border-radius: 11px; padding: 8px 0; font-weight: 700; }
+.jk-bid-btn { min-width: 40px; background: var(--card); color: var(--text); border: 1.5px solid var(--line-2); border-radius: 11px; padding: 8px 0; font-weight: 700; --btn-fill-hover: var(--tint-purple-2); }
 .jk-bid-btn:hover:not(:disabled) { border-color: var(--brand); color: var(--brand); }
-.jk-bid-btn.pass { background: var(--tint-yellow); color: #5a3d00; border-color: transparent; }
+/* Pass keeps its yellow identity on hover — dark ink, deeper yellow. */
+.jk-bid-btn.pass { background: var(--tint-yellow); color: #5a3d00; border-color: transparent; --btn-fill-hover: #f6d98a; }
+.jk-bid-btn.pass:hover:not(:disabled) { color: #5a3d00; border-color: transparent; }
 .jk-bid-btn.forbidden { opacity: 0.4; text-decoration: line-through; cursor: not-allowed; background: rgba(216, 58, 52, 0.08); border-color: rgba(216, 58, 52, 0.3); color: var(--red, #d83a34); }
 .jk-savaldebulo { margin-left: 8px; font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--red, #d83a34); background: rgba(216, 58, 52, 0.12); border-radius: 8px; padding: 2px 7px; text-transform: none; letter-spacing: 0; }
 
