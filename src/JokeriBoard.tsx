@@ -27,6 +27,9 @@ interface JokeriView {
   mode: "solo" | "teams";
   teams: string[][];
   phase: "trump" | "bid" | "play" | "done";
+  /** Deal schedule chosen at the table. Optional: an older published wasm may
+   *  not emit it, in which case the sheet falls back to the standard piles. */
+  format?: "standard" | "nines";
   handIndex: number;
   handCount: number;
   handSize: number;
@@ -71,11 +74,64 @@ function shortName(id: string): string {
   return base.length <= 12 ? base.charAt(0).toUpperCase() + base.slice(1) : base.slice(0, 6) + "…";
 }
 
-function roundOf(handIndex: number): { round: number; deal: number; total: number } {
-  if (handIndex < 8) return { round: 1, deal: handIndex + 1, total: 8 };
-  if (handIndex < 12) return { round: 2, deal: handIndex - 7, total: 4 };
-  if (handIndex < 20) return { round: 3, deal: handIndex - 11, total: 8 };
-  return { round: 4, deal: handIndex - 19, total: 4 };
+/* ------------------------------- the four piles -------------------------------
+ * The paper is drawn as separate piles side by side, each with its own running
+ * total underneath — not one long column. A pile is one block of the deal
+ * schedule, so this mirrors the game's buildSchedule():
+ *
+ *   standard: 1–8 | 9,9,9,9 | 8–1 | 9,9,9,9   (24 deals, four piles)
+ *   nines:    9,9,9,9 | 9,9,9,9               (8 deals, two piles)
+ *
+ * The view exposes `format` and `handCount` but not the schedule array, so the
+ * sizes are derived here. Keep in step with games/jokeri/src/game.ts.
+ * ---------------------------------------------------------------------------- */
+interface Pile {
+  /** Index of this pile's first deal in the whole schedule. */
+  start: number;
+  /** Cards dealt for each deal in the pile. */
+  sizes: number[];
+}
+
+function pilesOf(format: string | undefined): Pile[] {
+  if (format === "nines") {
+    return [
+      { start: 0, sizes: [9, 9, 9, 9] },
+      { start: 4, sizes: [9, 9, 9, 9] },
+    ];
+  }
+  return [
+    { start: 0, sizes: [1, 2, 3, 4, 5, 6, 7, 8] },
+    { start: 8, sizes: [9, 9, 9, 9] },
+    { start: 12, sizes: [8, 7, 6, 5, 4, 3, 2, 1] },
+    { start: 20, sizes: [9, 9, 9, 9] },
+  ];
+}
+
+/** Column heading inside a pile — a couple of letters is all that fits, and all
+ *  a player needs to find their column. Full names live in the standings. */
+function initialOf(name: string): string {
+  return name.trim().slice(0, 3);
+}
+
+/** A pile's heading: "1–8" for a run, "9 × 4" for a block of nines. */
+function pileLabel(p: Pile): string {
+  const first = p.sizes[0];
+  const last = p.sizes[p.sizes.length - 1];
+  if (first === last) return `${first} × ${p.sizes.length}`;
+  return `${first}–${last}`;
+}
+
+/** Which pile a deal falls in, and where it sits inside it. */
+function roundOf(handIndex: number, format?: string): { round: number; deal: number; total: number } {
+  const piles = pilesOf(format);
+  for (let i = 0; i < piles.length; i++) {
+    const p = piles[i];
+    if (handIndex < p.start + p.sizes.length) {
+      return { round: i + 1, deal: handIndex - p.start + 1, total: p.sizes.length };
+    }
+  }
+  const last = piles[piles.length - 1];
+  return { round: piles.length, deal: last.sizes.length, total: last.sizes.length };
 }
 
 // A card-table renderer for Jokeri: opponents around the desk with their bid /
@@ -187,7 +243,7 @@ export function JokeriBoard({
     setPicker(null);
   }
 
-  const rnd = roundOf(G.handIndex);
+  const rnd = roundOf(G.handIndex, G.format);
   const roundLabel = t("jk.round", { r: rnd.round, n: rnd.deal, total: rnd.total });
   const trumpLabel = G.trump ? null : t("jk.noTrump");
 
@@ -582,10 +638,32 @@ function fmtTotal(n: number): string {
   return (n / 100).toFixed(1).replace(".", ",").replace("-", "−");
 }
 
-// Does a round (and thus a subtotal band) end after this deal?
-function roundEndsAfter(handIndex: number, handCount: number): boolean {
-  if (handIndex + 1 >= handCount) return false; // the very end gets the footer, not a band
-  return roundOf(handIndex).round !== roundOf(handIndex + 1).round;
+/**
+ * Walk the schedule in order and hand back, per pile, the row for every deal it
+ * holds plus the pile's closing total. Totals are cumulative across the whole
+ * sheet (pile 2 carries pile 1 forward), and a pile only shows its total once
+ * every deal in it has been scored — the way you only rule off a block on paper
+ * when it is finished.
+ */
+function buildPiles(G: JokeriView, ended: boolean): Array<{
+  pile: Pile;
+  deals: Array<{ handIndex: number; size: number; result?: JHandResult; live: boolean }>;
+  total: Record<string, number> | null;
+}> {
+  const byIndex = new Map((G.handResults ?? []).map((r) => [r.handIndex, r]));
+  const running: Record<string, number> = Object.fromEntries(G.players.map((p) => [p, 0]));
+  const liveIndex = !ended && G.phase !== "done" && !byIndex.has(G.handIndex) ? G.handIndex : -1;
+
+  return pilesOf(G.format).map((pile) => {
+    const deals = pile.sizes.map((size, i) => {
+      const handIndex = pile.start + i;
+      const result = byIndex.get(handIndex);
+      if (result) for (const p of G.players) running[p] = (running[p] ?? 0) + (result.delta[p] ?? 0);
+      return { handIndex, size, result, live: handIndex === liveIndex };
+    });
+    const complete = deals.every((d) => d.result);
+    return { pile, deals, total: complete ? { ...running } : null };
+  });
 }
 
 function ScoreGrid({
@@ -604,121 +682,133 @@ function ScoreGrid({
   nameOf: (id: string) => string;
 }) {
   const { t } = useT();
-  const results = G.handResults ?? [];
-  const running: Record<string, number> = Object.fromEntries(G.players.map((p) => [p, 0]));
-
-  // Keep the newest deal (the live row) in view as the sheet fills up.
-  const scrollRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [results.length, G.handIndex]);
-
-  // Build the body: each scored deal, a subtotal band at every round break, and
-  // finally the live current deal.
-  const rows: ReactNode[] = [];
-  for (const hr of results) {
-    for (const p of G.players) running[p] = (running[p] ?? 0) + (hr.delta[p] ?? 0);
-    rows.push(
-      <tr key={`h${hr.handIndex}`} className="jk-g-row">
-        <td className="jk-g-deal">{hr.handSize}</td>
-        {G.players.map((p) => (
-          <ScoreCell key={p} bid={hr.bids[p] ?? 0} pts={hr.delta[p] ?? 0} taken={hr.taken[p] ?? 0} />
-        ))}
-      </tr>,
-    );
-    if (roundEndsAfter(hr.handIndex, G.handCount)) {
-      const snapshot = { ...running };
-      rows.push(
-        <tr key={`b${hr.handIndex}`} className="jk-g-band">
-          <td className="jk-g-deal" aria-hidden />
-          {G.players.map((p) => (
-            <td key={p} className="jk-g-total">
-              {fmtTotal(snapshot[p] ?? 0)}
-            </td>
-          ))}
-        </tr>,
-      );
-    }
-  }
-
-  // The live, in-progress deal — shown until the match is done.
-  const played = results.some((r) => r.handIndex === G.handIndex);
-  if (!ended && G.phase !== "done" && !played) {
-    rows.push(
-      <tr key="live" className="jk-g-row live">
-        <td className="jk-g-deal">{G.handSize || "·"}</td>
-        {G.players.map((p) => (
-          <td key={p} className={`jk-g-cell ${p === G.toAct ? "acting" : ""}`}>
-            <span className="jk-cellbox">
-              <span className="jk-bidnum">{fmtLiveBid(G.bids[p])}</span>
-              <span className="jk-pts live">·{G.taken[p] ?? 0}</span>
-            </span>
-          </td>
-        ))}
-      </tr>,
-    );
-  }
+  const piles = buildPiles(G, ended);
 
   return (
     <aside className="jk-paper">
       <div className="jk-paper-head">
         <span className="jk-paper-title">{t("jk.scoresheet")}</span>
         <span className="jk-round">{roundLabel}</span>
+        {/* Trump and the bid tally ride on the title line: stacked, they cost the
+            felt ~70px of height it needs more than the sheet does. */}
+        <span className="jk-trump">
+          <span className="jk-trump-lbl">{t("jk.trump")}</span>
+          {G.trump ? <SuitGlyph s={G.trump} size={18} /> : <span className="jk-notrump">NT</span>}
+          {G.handSize > 0 && <span className="jk-handsize">{t("jk.cardDeal", { n: G.handSize })}</span>}
+        </span>
+        {G.handSize > 0 && G.phase !== "trump" && (() => {
+          const bt = G.players.reduce((s, p) => s + (G.bids[p] ?? 0), 0);
+          const ab = G.players.every((p) => G.bids[p] != null);
+          const gap = G.handSize - bt;
+          return (
+            <span className={`jk-sheet-bids ${ab ? (gap < 0 ? "over" : gap > 0 ? "under" : "") : ""}`}>
+              <span>{t("jk.bids", { a: bt, b: G.handSize })}</span>
+              {ab ? (
+                gap < 0 ? <b>წაგლეჯვა +{Math.abs(gap)}</b> : gap > 0 ? <b>შეტენვა −{gap}</b> : <b>{t("jk.full")}</b>
+              ) : (
+                gap > 0 && <b className="jk-fill">{t("jk.fill", { gap })}</b>
+              )}
+            </span>
+          );
+        })()}
       </div>
-      <div className="jk-trump">
-        <span className="jk-trump-lbl">{t("jk.trump")}</span>
-        {G.trump ? <SuitGlyph s={G.trump} size={22} /> : <span className="jk-notrump">NT</span>}
-        {G.handSize > 0 && <span className="jk-handsize">{t("jk.cardDeal", { n: G.handSize })}</span>}
-      </div>
-      {G.handSize > 0 && G.phase !== "trump" && (() => {
-        const bt = G.players.reduce((s, p) => s + (G.bids[p] ?? 0), 0);
-        const ab = G.players.every((p) => G.bids[p] != null);
-        const gap = G.handSize - bt;
-        return (
-          <div className={`jk-sheet-bids ${ab ? (gap < 0 ? "over" : gap > 0 ? "under" : "") : ""}`}>
-            <span>{t("jk.bids", { a: bt, b: G.handSize })}</span>
-            {ab ? (
-              gap < 0 ? <b>წაგლეჯვა +{Math.abs(gap)}</b> : gap > 0 ? <b>შეტენვა −{gap}</b> : <b>{t("jk.full")}</b>
-            ) : (
-              gap > 0 && <b className="jk-fill">{t("jk.fill", { gap })}</b>
-            )}
+
+      {/* The piles, side by side — each block of the schedule ruled off with its
+          own running total, the way the sheet is laid out on the table. */}
+      <div className="jk-piles" style={{ ["--piles" as string]: piles.length }}>
+        {piles.map(({ pile, deals, total }, pi) => (
+          <div key={pi} className={`jk-pile ${deals.some((d) => d.live) ? "current" : ""}`}>
+            <div className="jk-pile-head">{pileLabel(pile)}</div>
+            <table className="jk-grid">
+              <thead>
+                <tr>
+                  <th className="jk-g-deal" title="cards dealt">#</th>
+                  {/* Initials only: the columns repeat in every pile, so the full
+                      names — and who deals / who acts — are tracked once, in the
+                      standings below. Four names per pile neither fits nor helps. */}
+                  {G.players.map((p) => {
+                    const tc = teamColor(p);
+                    return (
+                      <th key={p} className={`jk-g-name ${p === me ? "you" : ""}`} title={nameOf(p)}>
+                        {tc && <span className="jk-team-dot" style={{ background: tc }} />}
+                        <span className="jk-g-nick">{initialOf(nameOf(p))}</span>
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {deals.map(({ handIndex, size, result, live }) => {
+                  if (result) {
+                    return (
+                      <tr key={handIndex} className="jk-g-row">
+                        <td className="jk-g-deal">{result.handSize}</td>
+                        {G.players.map((p) => (
+                          <ScoreCell key={p} bid={result.bids[p] ?? 0} pts={result.delta[p] ?? 0} taken={result.taken[p] ?? 0} />
+                        ))}
+                      </tr>
+                    );
+                  }
+                  if (live) {
+                    return (
+                      <tr key={handIndex} className="jk-g-row live">
+                        <td className="jk-g-deal">{G.handSize || size}</td>
+                        {G.players.map((p) => (
+                          <td key={p} className={`jk-g-cell ${p === G.toAct ? "acting" : ""}`}>
+                            <span className="jk-cellbox">
+                              <span className="jk-bidnum">{fmtLiveBid(G.bids[p])}</span>
+                              <span className="jk-pts live">·{G.taken[p] ?? 0}</span>
+                            </span>
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  }
+                  // Not dealt yet: the deal size is already ruled on the paper.
+                  return (
+                    <tr key={handIndex} className="jk-g-row future">
+                      <td className="jk-g-deal">{size}</td>
+                      {G.players.map((p) => (
+                        <td key={p} className="jk-g-cell" />
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="jk-g-band">
+                  <td className="jk-g-deal" aria-hidden />
+                  {G.players.map((p) => (
+                    <td key={p} className="jk-g-total">
+                      {total ? fmtTotal(total[p] ?? 0) : ""}
+                    </td>
+                  ))}
+                </tr>
+              </tfoot>
+            </table>
           </div>
-        );
-      })()}
-
-      <div className="jk-grid-scroll" ref={scrollRef}>
-        <table className="jk-grid">
-          <thead>
-            <tr>
-              <th className="jk-g-deal" title="cards dealt">#</th>
-              {G.players.map((p) => {
-                const tc = teamColor(p);
-                const acting = p === G.toAct && !ended;
-                return (
-                  <th key={p} className={`jk-g-name ${p === me ? "you" : ""}`}>
-                    {tc && <span className="jk-team-dot" style={{ background: tc }} />}
-                    <span className="jk-g-nick">{p === me ? t("common.you") : nameOf(p)}</span>
-                    {p === G.dealer && <span className="jk-badge" title="dealer">{t("jk.dealer")}</span>}
-                    {acting && <span className="jk-turn-dot" />}
-                  </th>
-                );
-              })}
-            </tr>
-          </thead>
-          <tbody>{rows}</tbody>
-        </table>
+        ))}
       </div>
 
-      {/* standings footer — always-visible running totals (and team sums) ÷100 */}
+      {/* Standings — the sheet's legend as well as its totals: this is the one
+          place the full names, the dealer and whose turn it is are written, so
+          the piles above can stay initials. */}
       <div className="jk-standings">
         <div className="jk-stand-row heads" style={{ ["--cols" as string]: G.players.length }}>
           <span className="jk-stand-lbl">{t("jk.now")}</span>
-          {G.players.map((p) => (
-            <span key={p} className="jk-stand-tot">
-              {fmtTotal(G.scores[p] ?? 0)}
-            </span>
-          ))}
+          {G.players.map((p) => {
+            const tc = teamColor(p);
+            const acting = p === G.toAct && !ended;
+            return (
+              <span key={p} className={`jk-stand-who ${p === me ? "you" : ""} ${acting ? "acting" : ""}`}>
+                {tc && <span className="jk-team-dot" style={{ background: tc }} />}
+                <span className="jk-stand-name">{p === me ? t("common.you") : nameOf(p)}</span>
+                {p === G.dealer && <span className="jk-badge" title="dealer">{t("jk.dealer")}</span>}
+                {acting && <span className="jk-turn-dot" />}
+                <b className="jk-stand-tot">{fmtTotal(G.scores[p] ?? 0)}</b>
+              </span>
+            );
+          })}
         </div>
         {G.mode === "teams" && (
           <div className="jk-teamtotals">
@@ -748,8 +838,11 @@ function ScoreCell({ bid, pts, taken }: { bid: number; pts: number; taken: numbe
       <span className="jk-cellbox">
         <span className="jk-bidnum">{bid === 0 ? "–" : bid}</span>
         {khisht ? (
-          <span className="jk-khisht" title={`khisht ${pts}`}>
-            ✕{Math.abs(pts)}
+          // A struck box, never a number: a pile column is ~45px and the penalty
+          // is the same at every table anyway — the damage shows in the total.
+          // (It used to print ✕200, which clipped to a misleading "20".)
+          <span className="jk-khisht" title={`khisht ${pts}`} aria-label={`khisht ${pts}`}>
+            ✕
           </span>
         ) : (
           <span className="jk-pts">{pts}</span>

@@ -860,9 +860,12 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 
 /* ================================ Jokeri ================================== */
 
-.jokeri { display: grid; grid-template-columns: clamp(320px, 24vw, 400px) 1fr; gap: 18px; align-items: start; }
+/* The sheet is a wide band across the top with the felt below it: the four piles
+   sit side by side the way the paper is actually laid out on the table, and four
+   piles of five columns will not fit in a sidebar. */
+.jokeri { display: grid; grid-template-columns: 1fr; gap: 14px; align-items: start; }
 
-/* left "scoresheet" paper */
+/* the "scoresheet" paper */
 .jk-paper {
   background:
     repeating-linear-gradient(transparent, transparent 31px, rgba(108,76,241,0.08) 32px),
@@ -870,18 +873,18 @@ button.danger:hover:not(:disabled) { background: #b42318; }
   border: 1px solid var(--line); border-radius: 14px; padding: 14px 14px 16px;
   box-shadow: var(--shadow-card); position: relative;
 }
-.jk-paper::before {
-  content: ""; position: absolute; left: 30px; top: 0; bottom: 0; width: 1px; background: rgba(216,58,52,0.28);
-}
-.jk-paper-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; }
+/* No sheet-wide margin rule at full width — it would cut through the first
+   pile. Each pile rules its own margin beside the deal column. */
+.jk-paper-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px;
+  padding-bottom: 8px; border-bottom: 1px dashed var(--line-2); }
 .jk-paper-title { font-family: var(--font-display); font-weight: 700; font-size: 16px; }
 .jk-round { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
-.jk-trump { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed var(--line-2); }
+.jk-trump { display: inline-flex; align-items: center; gap: 7px; }
 .jk-trump-lbl { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted-2); }
 .jk-notrump { font-family: var(--font-mono); font-weight: 700; font-size: 13px; color: var(--muted); background: var(--panel); border-radius: 6px; padding: 1px 7px; }
-.jk-handsize { margin-left: auto; font-family: var(--font-mono); font-size: 10.5px; color: var(--muted-2); }
+.jk-handsize { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted-2); }
 .jk-sheet-bids {
-  display: flex; align-items: center; gap: 8px; margin: -4px 0 10px; padding: 5px 9px; border-radius: 9px;
+  display: inline-flex; align-items: center; gap: 8px; margin-left: auto; padding: 4px 9px; border-radius: 9px;
   background: var(--panel); font-family: var(--font-mono); font-size: 11px; color: var(--muted);
 }
 .jk-sheet-bids b { font-family: var(--font-display); font-size: 12px; }
@@ -889,26 +892,35 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 .jk-sheet-bids.over { background: rgba(255, 106, 61, 0.14); } .jk-sheet-bids.over b { color: #d1521f; }
 .jk-sheet-bids.under { background: var(--tint-teal); } .jk-sheet-bids.under b { color: var(--teal-700); }
 
+/* the piles, side by side — one per block of the deal schedule */
+.jk-piles { display: grid; grid-template-columns: repeat(var(--piles, 4), 1fr); gap: 10px; align-items: start; }
+.jk-pile { border: 1px solid rgba(108,76,241,0.18); border-radius: 10px; padding: 5px 6px 3px; background: #fffdf7; }
+.jk-pile.current { border-color: rgba(108,76,241,0.5); box-shadow: 0 0 0 2px var(--tint-purple); }
+.jk-pile-head {
+  font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em;
+  color: var(--brand-700, #4429a3); text-align: center; padding-bottom: 4px; margin-bottom: 3px;
+  border-bottom: 1px solid rgba(108,76,241,0.25);
+}
 /* the traditional grid: a deal per row, "bid │ points" per player */
-.jk-grid-scroll { max-height: 56vh; overflow-y: auto; margin: 0 -4px; }
 .jk-grid { width: 100%; border-collapse: collapse; table-layout: fixed; }
-.jk-grid thead th { position: sticky; top: 0; z-index: 2; background: #fffdf7; }
+.jk-g-row.future .jk-g-cell { height: 20px; }
+.jk-g-row.future .jk-g-deal { color: var(--muted-2); font-weight: 400; }
 .jk-g-deal {
-  width: 24px; text-align: center; font-family: var(--font-mono); font-size: 11px; font-weight: 700;
-  color: var(--muted); padding: 3px 2px; border-right: 1px solid rgba(216,58,52,0.28);
+  width: 18px; text-align: center; font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  color: var(--muted); padding: 2px 1px; border-right: 1px solid rgba(216,58,52,0.28);
 }
 .jk-g-name {
-  padding: 4px 3px 5px; border-bottom: 1px solid var(--line); vertical-align: bottom;
-  font-size: 11.5px; font-weight: 700; text-align: center; line-height: 1.25;
+  padding: 2px 2px 4px; border-bottom: 1px solid var(--line); vertical-align: bottom;
+  font-size: 10px; font-weight: 700; text-align: center; line-height: 1.2; white-space: nowrap;
 }
 .jk-g-name.you { color: var(--brand); }
 .jk-g-nick { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
-.jk-g-name .jk-team-dot { display: inline-block; margin-right: 3px; vertical-align: middle; }
+.jk-g-name .jk-team-dot { display: inline-block; width: 6px; height: 6px; margin-right: 2px; vertical-align: middle; }
 
 .jk-g-row td { border-bottom: 1px solid rgba(228,225,231,0.55); }
-.jk-g-cell { padding: 3px 6px 3px 5px; font-family: var(--font-mono); font-size: 12.5px; }
+.jk-g-cell { padding: 2px 4px 2px 4px; font-family: var(--font-mono); font-size: 11.5px; overflow: hidden; }
 .jk-cellbox { display: flex; align-items: baseline; justify-content: space-between; gap: 4px; }
-.jk-bidnum { color: var(--muted); font-size: 11px; min-width: 8px; }
+.jk-bidnum { color: var(--muted); font-size: 10px; min-width: 6px; flex: none; }
 .jk-pts { font-weight: 700; margin-left: auto; }
 .jk-pts.live { color: var(--muted-2); font-weight: 500; }
 .jk-g-row.live { background: rgba(255,197,61,0.14); }
@@ -919,13 +931,14 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 .jk-g-cell.khisht { background: rgba(216, 58, 52, 0.13); }
 .jk-khisht {
   margin-left: auto; display: inline-flex; align-items: center; justify-content: center;
-  font-family: var(--font-mono); font-weight: 700; font-size: 10.5px; line-height: 1;
-  color: #fff; background: var(--red, #d83a34); border-radius: 5px; padding: 2px 5px; letter-spacing: 0.3px;
+  font-family: var(--font-mono); font-weight: 700; font-size: 10px; line-height: 1;
+  color: #fff; background: var(--red, #d83a34); border-radius: 4px; padding: 2px 4px; letter-spacing: 0;
+  min-width: 0; overflow: hidden; /* a pile column is ~45px — never spill into the neighbour */
 }
 
 /* subtotal band — the running total ÷100, once per round */
 .jk-g-band td { background: rgba(108,76,241,0.09); border-top: 1.5px solid rgba(108,76,241,0.35); border-bottom: 1.5px solid rgba(108,76,241,0.35); }
-.jk-g-total { text-align: center; font-family: var(--font-mono); font-weight: 700; font-size: 13px; padding: 4px 3px; color: var(--brand-deep, #4429A3); }
+.jk-g-total { text-align: center; font-family: var(--font-mono); font-weight: 700; font-size: 11px; padding: 3px 1px; color: var(--brand-deep, #4429A3); }
 .jk-g-band .jk-g-deal { background: rgba(108,76,241,0.09); border-right-color: rgba(108,76,241,0.35); }
 
 .jk-team-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
@@ -938,6 +951,13 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 
 /* always-visible standings + team sums */
 .jk-standings { margin-top: 10px; padding-top: 9px; border-top: 1px dashed var(--line-2); }
+.jk-stand-who {
+  display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-body); font-size: 12px;
+}
+.jk-stand-who.you .jk-stand-name { color: var(--brand); font-weight: 700; }
+.jk-stand-who.acting { background: var(--tint-yellow); border-radius: 8px; padding: 1px 7px; }
+.jk-stand-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px; }
+.jk-stand-who .jk-stand-tot { margin-left: 3px; font-family: var(--font-mono); font-size: 13px; }
 .jk-stand-row { display: grid; grid-template-columns: 24px repeat(var(--cols, 4), 1fr); align-items: center; }
 .jk-stand-lbl { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted-2); }
 .jk-stand-tot { text-align: center; font-family: var(--font-mono); font-weight: 700; font-size: 13px; }
@@ -1165,8 +1185,9 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 .jk-picker-mode .jk-suit-row { justify-content: center; }
 
 @media (max-width: 780px) {
-  .jokeri { grid-template-columns: 1fr; }
+  /* Narrow: the felt comes first and the piles fold to two-up, then one. */
   .jk-paper { order: 2; }
+  .jk-piles { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* ---------------- SchemaBoard: the generic declarative renderer ------------- */
@@ -1244,4 +1265,8 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 .sandbox-frame {
   width: 100%; height: min(72vh, 680px); border: 1px solid var(--line); border-radius: var(--radius);
   background: var(--panel); box-shadow: var(--shadow-card); display: block;
+}
+
+@media (max-width: 620px) {
+  .jk-piles { grid-template-columns: 1fr; }
 }
