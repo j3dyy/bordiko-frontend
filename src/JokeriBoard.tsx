@@ -81,7 +81,7 @@ function shortName(id: string): string {
  * one such block of the deal schedule, mirroring the game's buildSchedule():
  *
  *   standard: 1–8 | 9,9,9,9 | 8–1 | 9,9,9,9   (24 deals, four blocks)
- *   nines:    9,9,9,9 | 9,9,9,9               (8 deals, two blocks)
+ *   nines:    9,9,9,9 | 9,9,9,9 | 9,9,9,9 | 9,9,9,9   (16 deals, four blocks)
  *
  * The view exposes `format` and `handCount` but not the schedule array, so the
  * sizes are derived here. Keep in step with games/jokeri/src/game.ts.
@@ -98,6 +98,8 @@ function pilesOf(format: string | undefined): Pile[] {
     return [
       { start: 0, sizes: [9, 9, 9, 9] },
       { start: 4, sizes: [9, 9, 9, 9] },
+      { start: 8, sizes: [9, 9, 9, 9] },
+      { start: 12, sizes: [9, 9, 9, 9] },
     ];
   }
   return [
