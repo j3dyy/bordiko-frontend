@@ -1,4 +1,4 @@
-import type { Lobby, LeaderRow, Providers, User, CatalogGame } from "./wire.ts";
+import type { Lobby, LeaderRow, Providers, User, CatalogGame, AdminGame, AdminUser } from "./wire.ts";
 
 // Gateway base URL (auth + REST proxy + WebSocket all live here). Override at
 // build/dev time with VITE_GATEWAY_URL.
@@ -244,6 +244,36 @@ export async function fetchLeaderboard(gameId: string): Promise<LeaderRow[]> {
     "leaderboard",
   );
   return data.entries ?? [];
+}
+
+/* -------------------------------- admin ----------------------------------- */
+
+export async function adminListGames(): Promise<AdminGame[]> {
+  const data = await json<{ games: AdminGame[] }>(await req("/api/admin/games"), "adminGames");
+  return data.games ?? [];
+}
+
+export async function adminSetGameEnabled(id: string, enabled: boolean): Promise<void> {
+  const res = await req(`/api/admin/games/${encodeURIComponent(id)}/enabled`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ enabled }),
+  });
+  if (!res.ok) throw new Error(`setGameEnabled: ${res.status} ${await res.text()}`);
+}
+
+export async function adminListUsers(): Promise<AdminUser[]> {
+  const data = await json<{ users: AdminUser[] }>(await req("/api/admin/users"), "adminUsers");
+  return data.users ?? [];
+}
+
+export async function adminSetUserDisabled(id: string, disabled: boolean): Promise<void> {
+  const res = await req(`/api/admin/users/${encodeURIComponent(id)}/disabled`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ disabled }),
+  });
+  if (!res.ok) throw new Error(`setUserDisabled: ${res.status} ${await res.text()}`);
 }
 
 /* ------------------------------ websocket --------------------------------- */

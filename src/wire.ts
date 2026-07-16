@@ -73,6 +73,28 @@ export interface User {
   id: string;
   displayName: string;
   avatarUrl: string;
+  isAdmin?: boolean;
+  disabled?: boolean;
+}
+
+/* -------------------------------- admin ----------------------------------- */
+
+export interface AdminGame {
+  id: string;
+  displayName: string;
+  minPlayers: number;
+  maxPlayers: number;
+  enabled: boolean;
+}
+
+export interface AdminUser {
+  id: string;
+  displayName: string;
+  email: string;
+  provider: string;
+  disabled: boolean;
+  admin: boolean;
+  createdAt: string;
 }
 
 export interface Providers {
