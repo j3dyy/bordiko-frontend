@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Card, SuitGlyph } from "./CardArt.tsx";
 import { TEAM_COLORS } from "./TableSetup.tsx";
 import { soundCardPlay, soundTrickWon } from "./sound.ts";
@@ -74,13 +74,14 @@ function shortName(id: string): string {
   return base.length <= 12 ? base.charAt(0).toUpperCase() + base.slice(1) : base.slice(0, 6) + "…";
 }
 
-/* ------------------------------- the four piles -------------------------------
- * The paper is drawn as separate piles side by side, each with its own running
- * total underneath — not one long column. A pile is one block of the deal
- * schedule, so this mirrors the game's buildSchedule():
+/* ------------------------------- the deal blocks ------------------------------
+ * The paper is ONE tall table: the deals run top to bottom in blocks, and each
+ * block is ruled off with a cumulative subtotal band (the way the folk sheet
+ * stacks "1–8 · sum · 9 9 9 9 · sum · 8–1 · sum · 9 9 9 9 · sum"). A pile here is
+ * one such block of the deal schedule, mirroring the game's buildSchedule():
  *
- *   standard: 1–8 | 9,9,9,9 | 8–1 | 9,9,9,9   (24 deals, four piles)
- *   nines:    9,9,9,9 | 9,9,9,9               (8 deals, two piles)
+ *   standard: 1–8 | 9,9,9,9 | 8–1 | 9,9,9,9   (24 deals, four blocks)
+ *   nines:    9,9,9,9 | 9,9,9,9               (8 deals, two blocks)
  *
  * The view exposes `format` and `handCount` but not the schedule array, so the
  * sizes are derived here. Keep in step with games/jokeri/src/game.ts.
@@ -105,20 +106,6 @@ function pilesOf(format: string | undefined): Pile[] {
     { start: 12, sizes: [8, 7, 6, 5, 4, 3, 2, 1] },
     { start: 20, sizes: [9, 9, 9, 9] },
   ];
-}
-
-/** Column heading inside a pile — a couple of letters is all that fits, and all
- *  a player needs to find their column. Full names live in the standings. */
-function initialOf(name: string): string {
-  return name.trim().slice(0, 3);
-}
-
-/** A pile's heading: "1–8" for a run, "9 × 4" for a block of nines. */
-function pileLabel(p: Pile): string {
-  const first = p.sizes[0];
-  const last = p.sizes[p.sizes.length - 1];
-  if (first === last) return `${first} × ${p.sizes.length}`;
-  return `${first}–${last}`;
 }
 
 /** Which pile a deal falls in, and where it sits inside it. */
@@ -713,31 +700,39 @@ function ScoreGrid({
         })()}
       </div>
 
-      {/* The piles, side by side — each block of the schedule ruled off with its
-          own running total, the way the sheet is laid out on the table. */}
-      <div className="jk-piles" style={{ ["--piles" as string]: piles.length }}>
-        {piles.map(({ pile, deals, total }, pi) => (
-          <div key={pi} className={`jk-pile ${deals.some((d) => d.live) ? "current" : ""}`}>
-            <div className="jk-pile-head">{pileLabel(pile)}</div>
-            <table className="jk-grid">
-              <thead>
-                <tr>
-                  <th className="jk-g-deal" title="cards dealt">#</th>
-                  {/* Initials only: the columns repeat in every pile, so the full
-                      names — and who deals / who acts — are tracked once, in the
-                      standings below. Four names per pile neither fits nor helps. */}
-                  {G.players.map((p) => {
-                    const tc = teamColor(p);
-                    return (
-                      <th key={p} className={`jk-g-name ${p === me ? "you" : ""}`} title={nameOf(p)}>
-                        {tc && <span className="jk-team-dot" style={{ background: tc }} />}
-                        <span className="jk-g-nick">{initialOf(nameOf(p))}</span>
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
+      {/* The scoresheet proper: ONE tall table, the four players as columns and
+          every deal a row — exactly like the folk paper. The schedule runs top to
+          bottom in blocks (1–8 · 9×4 · 8–1 · 9×4); each finished block is ruled
+          off with a cumulative subtotal band (it carries the block before it
+          forward), and the footer always shows the live running total. */}
+      <div className="jk-sheet-scroll">
+        <table className="jk-grid jk-sheet">
+          <thead>
+            <tr>
+              <th className="jk-g-deal" title="cards dealt">#</th>
+              {/* Full names once, in the single shared header: this is the one
+                  place who deals ('D') and whose turn it is are marked. */}
+              {G.players.map((p) => {
+                const tc = teamColor(p);
+                const acting = p === G.toAct && !ended;
+                return (
+                  <th
+                    key={p}
+                    className={`jk-g-name ${p === me ? "you" : ""} ${acting ? "acting" : ""}`}
+                    title={nameOf(p)}
+                  >
+                    {tc && <span className="jk-team-dot" style={{ background: tc }} />}
+                    <span className="jk-g-nick">{nameOf(p)}</span>
+                    {p === G.dealer && <span className="jk-badge" title="dealer">{t("jk.dealer")}</span>}
+                    {acting && <span className="jk-turn-dot" />}
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {piles.map(({ deals, total }, pi) => (
+              <Fragment key={pi}>
                 {deals.map(({ handIndex, size, result, live }) => {
                   if (result) {
                     return (
@@ -774,57 +769,47 @@ function ScoreGrid({
                     </tr>
                   );
                 })}
-              </tbody>
-              <tfoot>
-                <tr className="jk-g-band">
-                  <td className="jk-g-deal" aria-hidden />
+                {/* Rule the block off with its cumulative subtotal — blank until
+                    every deal in the block is scored, the way you only total a
+                    finished block on paper. The band is also the block separator. */}
+                <tr className={`jk-g-band jk-sub ${deals.some((d) => d.live) ? "current" : ""}`}>
+                  <td className="jk-g-deal" aria-hidden>Σ</td>
                   {G.players.map((p) => (
-                    <td key={p} className="jk-g-total">
-                      {total ? fmtTotal(total[p] ?? 0) : ""}
-                    </td>
+                    <td key={p} className="jk-g-total">{total ? fmtTotal(total[p] ?? 0) : ""}</td>
                   ))}
                 </tr>
-              </tfoot>
-            </table>
-          </div>
-        ))}
+              </Fragment>
+            ))}
+          </tbody>
+          <tfoot>
+            {/* Always-visible grand total: the live running score, even mid-block
+                before the subtotal above has been ruled off. */}
+            <tr className="jk-grand">
+              <td className="jk-g-deal" aria-hidden />
+              {G.players.map((p) => (
+                <td key={p} className="jk-s-grand">{fmtTotal(G.scores[p] ?? 0)}</td>
+              ))}
+            </tr>
+          </tfoot>
+        </table>
       </div>
 
-      {/* Standings — the sheet's legend as well as its totals: this is the one
-          place the full names, the dealer and whose turn it is are written, so
-          the piles above can stay initials. */}
-      <div className="jk-standings">
-        <div className="jk-stand-row heads" style={{ ["--cols" as string]: G.players.length }}>
-          <span className="jk-stand-lbl">{t("jk.now")}</span>
-          {G.players.map((p) => {
-            const tc = teamColor(p);
-            const acting = p === G.toAct && !ended;
+      {/* Team totals ride under the sheet in teams mode (solo needs none — the
+          footer already carries every player's running total). */}
+      {G.mode === "teams" && (
+        <div className="jk-teamtotals">
+          {G.teams.map((team, i) => {
+            const total = team.reduce((s, p) => s + (G.scores[p] ?? 0), 0);
             return (
-              <span key={p} className={`jk-stand-who ${p === me ? "you" : ""} ${acting ? "acting" : ""}`}>
-                {tc && <span className="jk-team-dot" style={{ background: tc }} />}
-                <span className="jk-stand-name">{p === me ? t("common.you") : nameOf(p)}</span>
-                {p === G.dealer && <span className="jk-badge" title="dealer">{t("jk.dealer")}</span>}
-                {acting && <span className="jk-turn-dot" />}
-                <b className="jk-stand-tot">{fmtTotal(G.scores[p] ?? 0)}</b>
-              </span>
+              <div key={i} className="jk-teamtotal">
+                <span className="jk-team-dot" style={{ background: TEAM_COLORS[i % TEAM_COLORS.length] }} />
+                <span className="jk-team-name">{i === 0 ? t("ts.teamA") : i === 1 ? t("ts.teamB") : `Team ${String.fromCharCode(65 + i)}`}</span>
+                <span className="jk-team-sum">{fmtTotal(total)}</span>
+              </div>
             );
           })}
         </div>
-        {G.mode === "teams" && (
-          <div className="jk-teamtotals">
-            {G.teams.map((team, i) => {
-              const total = team.reduce((s, p) => s + (G.scores[p] ?? 0), 0);
-              return (
-                <div key={i} className="jk-teamtotal">
-                  <span className="jk-team-dot" style={{ background: TEAM_COLORS[i % TEAM_COLORS.length] }} />
-                  <span className="jk-team-name">{i === 0 ? t("ts.teamA") : i === 1 ? t("ts.teamB") : `Team ${String.fromCharCode(65 + i)}`}</span>
-                  <span className="jk-team-sum">{fmtTotal(total)}</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      )}
     </aside>
   );
 }
