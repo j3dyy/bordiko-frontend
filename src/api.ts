@@ -60,6 +60,21 @@ export async function listGames(): Promise<string[]> {
 }
 
 // The rich Discover catalog: per-game metadata + real rating/plays/live counts.
+// Which published games ship a custom sandboxed UI bundle. Cached from the
+// catalog so the game view can auto-pick the sandbox renderer for ANY marketplace
+// game (no per-game curation), even on a deep link where Discover wasn't loaded.
+let hasUICache: Record<string, boolean> | null = null;
+let hasUIPromise: Promise<Record<string, boolean>> | null = null;
+export async function loadHasUI(): Promise<Record<string, boolean>> {
+  if (hasUICache) return hasUICache;
+  if (!hasUIPromise) {
+    hasUIPromise = fetchCatalog()
+      .then((games) => (hasUICache = Object.fromEntries(games.map((g) => [g.id, !!g.hasUI]))))
+      .catch(() => ({})); // best-effort: on failure, nothing is treated as custom-UI
+  }
+  return hasUIPromise;
+}
+
 export async function fetchCatalog(): Promise<CatalogGame[]> {
   const data = await json<{ games: CatalogGame[] }>(await req("/api/catalog"), "catalog");
   return data.games ?? [];

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useMatch } from "./useMatch.ts";
-import { leaveMatch } from "./api.ts";
+import { leaveMatch, loadHasUI } from "./api.ts";
 import { isMuted, setMuted, soundEmote, soundRing } from "./sound.ts";
 import { useT } from "./i18n.tsx";
 import type { LiveEmote } from "./useMatch.ts";
@@ -73,6 +73,14 @@ export function Game({
     else soundEmote();
   }, [emotes]);
   const meta = gameMeta(gameId);
+  // Auto-detect a marketplace game's custom UI bundle: if the catalog says this
+  // game ships one, render it in the sandbox (no per-game curation needed).
+  const [hasUI, setHasUI] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void loadHasUI().then((m) => live && setHasUI(!!m[gameId]));
+    return () => { live = false; };
+  }, [gameId]);
   const [dismissed, setDismissed] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -138,7 +146,7 @@ export function Game({
               <EightsBoard state={state} playerId={playerId} onMove={sendMove} />
             ) : meta.renderer === "jokeri" ? (
               <JokeriBoard state={state} playerId={playerId} onMove={sendMove} />
-            ) : meta.renderer === "sandbox" ? (
+            ) : meta.renderer === "sandbox" || hasUI ? (
               <SandboxBoard state={state} playerId={playerId} gameId={gameId} onMove={sendMove} />
             ) : state.G?.board ? (
               <SchemaBoard state={state} playerId={playerId} gameId={gameId} onMove={sendMove} />

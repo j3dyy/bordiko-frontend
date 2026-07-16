@@ -160,6 +160,7 @@ export interface CatalogGame {
   ratingCount: number;
   plays: number;
   live: number;
+  hasUI?: boolean; // ships a custom sandboxed UI bundle → the frontend auto-renders it
 }
 
 /* ----------------------------- leaderboard -------------------------------- */

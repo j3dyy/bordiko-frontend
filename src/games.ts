@@ -62,6 +62,26 @@ const KNOWN: Record<string, Omit<GameMeta, "id">> = {
       "The first player to shed every card wins the round.",
     ],
   },
+  rails: {
+    name: "Rails",
+    blurb: "Claim coloured routes across the map, connect your secret cities, build the longest line.",
+    minPlayers: 2,
+    maxPlayers: 4,
+    renderer: "auto", // ships its own sandboxed map UI — auto-detected via the catalog's hasUI flag
+    accent: "#7C60F5",
+    emoji: "🚂",
+    category: "Route Building",
+    author: "@bordiko",
+    verified: true,
+    objective: "Score the most from claimed routes, your longest continuous line, and a connected secret destination.",
+    howTo: [
+      "On your turn, either draw two train cards or claim one route.",
+      "Draw from the face-up row or blindly from the deck (taking a face-up locomotive ★ is your whole turn).",
+      "Claim a route by paying that many cards of its colour — locomotives (★) are wild.",
+      "Each player holds a secret destination: connect its two cities by game end for a bonus, or lose the points.",
+      "When someone drops to two trains the final round begins; then score routes + longest line + destinations.",
+    ],
+  },
   "king-of-tokyo": {
     name: "King of Tokyo",
     blurb: "Roll dice, grab Tokyo, smash your rivals. Push your luck across three rolls.",
