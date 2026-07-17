@@ -187,48 +187,30 @@ function Quickstart() {
   return (
     <article className="doc">
       <h1>Quickstart</h1>
-      <p className="doc-lede">Build a working game — Tic-Tac-Toe — and take it all the way to a published, playable marketplace entry.</p>
+      <p className="doc-lede">Scaffold a game, play it against bots, compile it to WebAssembly, and publish it — all from your own project, with just Node installed.</p>
 
-      <h2>1. Prerequisites</h2>
-      <ul className="doc-list">
-        <li><b>Node 22.6+</b> — the engine runs your TypeScript directly via type-stripping, so there is no build step while you iterate.</li>
-        <li><b>Docker</b> — needed only for the final WebAssembly build and to publish (not for writing or testing logic).</li>
-        <li>Clone the platform repo and install workspace deps:</li>
-      </ul>
-      <Code>{`git clone https://github.com/j3dyy/bordiko && cd bordiko
+      <Callout kind="note">
+        <b>Early access.</b> The <code>@bordiko/sdk</code> and <code>@bordiko/cli</code> packages are still
+        rolling out. If the commands below can't find them yet, get in touch and we'll get you access.
+      </Callout>
+
+      <h2>1. Scaffold a game</h2>
+      <p>You need <b>Node 22.6+</b> — and nothing else (the build step fetches its own compiler; no Docker).</p>
+      <Code>{`npm create @bordiko/game my-game
+cd my-game
 npm install`}</Code>
+      <p>You get a ready-to-run project. Your whole game is <code>src/game.ts</code>:</p>
+      <Code>{`my-game/
+├── package.json      # your game's manifest (the "bordiko" block)
+├── src/game.ts        # the whole game — a starter Tic-Tac-Toe
+└── test/game.test.ts`}</Code>
 
-      <h2>2. Scaffold a game folder</h2>
-      <p>Games live under <code>games/&lt;your-game-id&gt;/</code>. Create two files:</p>
-      <Code>{`games/tic-tac-toe/
-├── package.json     # the "bordiko" manifest block (used at publish time)
-└── src/
-    └── game.ts       # the whole game`}</Code>
-      <p><code>package.json</code>:</p>
-      <Code>{`{
-  "name": "@bordiko/game-tic-tac-toe",
-  "private": true,
-  "type": "module",
-  "bordiko": {
-    "gameId": "tic-tac-toe",
-    "displayName": "Tic-Tac-Toe",
-    "minPlayers": 2,
-    "maxPlayers": 2,
-    "categories": ["classic"],
-    "board": "grid"
-  }
-}`}</Code>
+      <h2>2. Write the game</h2>
+      <p>A game is a deterministic reducer, built with <code>defineGame</code> from <code>@bordiko/sdk</code>:</p>
+      <Code>{`// src/game.ts
+import { defineGame, INVALID_MOVE } from "@bordiko/sdk";
 
-      <h2>3. Write the game</h2>
-      <p>
-        A game is a plain object matching the <code>GameDefinition</code> type. The shipped examples
-        import the engine by relative path (the path depth depends on your folder):
-      </p>
-      <Code>{`// games/tic-tac-toe/src/game.ts
-import type { GameDefinition } from "../../../packages/engine/src/index.ts";
-import { INVALID_MOVE } from "../../../packages/engine/src/index.ts";
-
-interface Ttt { cells: (string | null)[]; }
+interface State { board: (string | null)[]; }
 
 const LINES = [
   [0, 1, 2], [3, 4, 5], [6, 7, 8],
@@ -236,80 +218,56 @@ const LINES = [
   [0, 4, 8], [2, 4, 6],
 ];
 
-export const game: GameDefinition<Ttt> = {
-  name: "tic-tac-toe",
+export default defineGame<State>({
+  name: "my-game",
   minPlayers: 2,
   maxPlayers: 2,
+  meta: { displayName: "My Game" },
 
-  setup: () => ({ cells: Array(9).fill(null) }),
+  setup: () => ({ board: Array(9).fill(null) }),
 
   moves: {
-    // Claim a cell, then pass the turn.
-    place(G, payload: { cell: number }, ctx) {
-      const { cell } = payload;
-      if (cell < 0 || cell > 8 || G.cells[cell]) return INVALID_MOVE;
-      G.cells[cell] = ctx.playerId;
+    // Claim an empty cell, then pass the turn.
+    place: (G, payload, ctx) => {
+      const cell = (payload as { cell?: number }).cell;
+      if (typeof cell !== "number" || cell < 0 || cell > 8 || G.board[cell]) return INVALID_MOVE;
+      G.board[cell] = ctx.playerId;
       ctx.flow.endTurn();
     },
   },
 
-  // Run after every accepted move. Return a result to end the game.
+  // Runs after every accepted move; return a result to end the game.
   endIf: (G) => {
-    for (const [a, b, c] of LINES) {
-      if (G.cells[a] && G.cells[a] === G.cells[b] && G.cells[a] === G.cells[c]) {
-        return { winner: G.cells[a]! };
-      }
-    }
-    if (G.cells.every(Boolean)) return { draw: true };
+    for (const [a, b, c] of LINES)
+      if (G.board[a] && G.board[a] === G.board[b] && G.board[a] === G.board[c])
+        return { winner: G.board[a]! };
+    if (G.board.every(Boolean)) return { draw: true };
   },
 
   // The legal moves right now — powers bots and the default UI.
-  enumerate: (G) =>
-    G.cells
-      .map((v, i) => (v ? null : { type: "place", payload: { cell: i } }))
-      .filter(Boolean) as { type: string; payload: { cell: number } }[],
-};`}</Code>
+  enumerate: (G) => G.board.flatMap((v, i) => (v ? [] : [{ type: "place", payload: { cell: i } }])),
+});`}</Code>
       <Callout kind="warn">
-        Mutate <code>G</code> in place — the engine hands your move a fresh clone and commits it only
-        if the move is accepted. A rejected move (return <code>INVALID_MOVE</code>) is a pure no-op.
-        Never touch <code>Date</code>, <code>Math.random()</code>, or module-level mutable state.
+        Mutate <code>G</code> in place — the engine gives your move a fresh clone and commits it only if
+        accepted; a rejected move (<code>return INVALID_MOVE</code>) is a pure no-op. Never touch
+        <code> Date</code> or <code>Math.random()</code> — use <code>ctx.random</code> for anything random.
       </Callout>
 
-      <h2>4. Test it instantly — no build, no Docker</h2>
-      <p>Because the engine runs your <code>.ts</code> directly, unit tests are sub-second:</p>
-      <Code>{`// games/tic-tac-toe/test/ttt.test.ts
-import { test } from "node:test";
-import assert from "node:assert/strict";
-import { createMatch, applyMove } from "../../../packages/engine/src/index.ts";
-import { game } from "../src/game.ts";
+      <h2>3. Test it — instant, no build</h2>
+      <p>Your game runs as plain TypeScript, so the tests are sub-second:</p>
+      <Code>{`npm test`}</Code>
 
-test("X takes the top row and wins", () => {
-  let m = createMatch(game, { players: ["X", "O"], seed: "t1" });
-  const script = [["X", 0], ["O", 3], ["X", 1], ["O", 4], ["X", 2]] as const;
-  for (const [playerId, cell] of script) {
-    const r = applyMove(game, m, { type: "place", playerId, payload: { cell } });
-    assert.ok(r.ok, r.error);
-    m = r.state;
-  }
-  assert.equal(m.result?.winner, "X");
-});`}</Code>
-      <Code>{`node --test games/tic-tac-toe/test/*.test.ts`}</Code>
+      <h2>4. Play it in the sandbox</h2>
+      <p>Open a local table — play every seat, fill seats with bots, hot-reload on save, and preview a custom UI:</p>
+      <Code>{`npm run dev`}</Code>
+      <p>More in <b>Testing &amp; the sandbox</b>.</p>
 
-      <h2>5. Play it in the sandbox</h2>
-      <p>
-        Fuzz the game to completion against bots and confirm it replays deterministically — the whole
-        loop runs in Node. See <b>Testing &amp; the sandbox</b> for the local harness that lets you play
-        every seat, fill seats with bots, hot-reload on save, and preview your custom UI.
-      </p>
+      <h2>5. Compile to WebAssembly</h2>
+      <p>When the logic is solid, build the sandboxed module. The first build downloads its compiler (Javy) — no Docker:</p>
+      <Code>{`npm run build   # → dist/my-game.wasm`}</Code>
 
-      <h2>6. Build to WebAssembly</h2>
-      <p>When the logic is solid, compile the game to a sandboxed <code>.wasm</code> module:</p>
-      <Code>{`docker compose -f infra/docker-compose.yml --profile wasm run --rm \\
-  wasm-build tools/wasm/build.sh games/tic-tac-toe dist/tic-tac-toe.wasm`}</Code>
-
-      <h2>7. Publish</h2>
-      <Code>{`REGISTRY=https://api.bordiko.com/api ADMIN_TOKEN=<token> \\
-  node tools/publish.mjs games/tic-tac-toe`}</Code>
+      <h2>6. Publish</h2>
+      <Code>{`REGISTRY=https://api.bordiko.com/api ADMIN_TOKEN=<token> npm run publish:game`}</Code>
       <p>
         The registry validates your module and stores it; the game host fetches it on demand the first
         time someone starts a match — no redeploy. Full details in <b>Publishing</b>.
@@ -323,10 +281,12 @@ function GameApi() {
     <article className="doc">
       <h1>Game API</h1>
       <p className="doc-lede">
-        A game is a <code>GameDefinition&lt;S&gt;</code>, where <code>S</code> is your state type. Only
-        <code> name</code>, <code>minPlayers</code>, <code>maxPlayers</code>, <code>setup</code>, and
-        <code> moves</code> are required.
+        You build a game with <code>defineGame</code> from <code>@bordiko/sdk</code>, which validates a
+        <code> GameDefinition&lt;S&gt;</code> (where <code>S</code> is your state type) and attaches display
+        metadata. Only <code>name</code>, <code>minPlayers</code>, <code>maxPlayers</code>, <code>setup</code>,
+        and <code>moves</code> are required.
       </p>
+      <Code>{`import { defineGame, INVALID_MOVE } from "@bordiko/sdk";`}</Code>
 
       <h2>Definition</h2>
       <Code>{`interface GameDefinition<S> {
@@ -466,7 +426,7 @@ function Rendering() {
         channel to the world is a message bridge to the match.
       </p>
       <p>The bridge (from <code>@bordiko/sdk/ui</code>, or inline — it is tiny):</p>
-      <Code>{`<!-- games/my-game/ui.html -->
+      <Code>{`<!-- ui.html (next to package.json) -->
 <div id="app"></div>
 <script type="module">
   // Receive redacted state; the host pushes it on every change.
@@ -518,8 +478,8 @@ function Publishing() {
 }`}</Code>
 
       <h2>The command</h2>
-      <Code>{`REGISTRY=https://api.bordiko.com/api ADMIN_TOKEN=<token> \\
-  node tools/publish.mjs games/my-game`}</Code>
+      <p>From your game project, after <code>npm run build</code>:</p>
+      <Code>{`REGISTRY=https://api.bordiko.com/api ADMIN_TOKEN=<token> npm run publish:game`}</Code>
       <p>It sends the manifest, the base64 <code>.wasm</code>, any <code>assets/*</code> images, and an optional <code>ui.html</code>.</p>
 
       <h2>What the registry checks</h2>
@@ -553,9 +513,21 @@ function Sandbox() {
         the heavier tools only when you want to see the real thing.
       </p>
 
+      <h2>The dev sandbox</h2>
+      <p>The main tool — a local table for your game, in the browser, no login or services:</p>
+      <Code>{`npm run dev`}</Code>
+      <p>It drives the same reducer the WASM host runs, so what you see is what players get. You can:</p>
+      <ul className="doc-list">
+        <li><b>Play every seat</b> — click a seat to sit in it; each seat sees only its own redacted view, so you can test hidden information from every angle.</li>
+        <li><b>Fill seats with bots</b> — flip any seat to a bot, then <i>Step</i> one move or <i>auto-play</i>. Bots use your <code>enumerate</code>; set every seat to a bot to watch a whole game.</li>
+        <li><b>Hot-reload on save</b> — edit your game and the match restarts with the new rules instantly.</li>
+        <li><b>Preview your custom UI</b> — a <code>ui.html</code> loads in the same locked-down sandbox iframe players get, over the real message bridge.</li>
+        <li><b>Inspect everything</b> — a live panel shows the phase and turn, the current seat's redacted state, its legal moves, and the move log.</li>
+      </ul>
+
       <h2>Unit tests (sub-second)</h2>
-      <p>Your game's <code>.ts</code> runs directly, so tests are instant:</p>
-      <Code>{`node --test games/my-game/test/*.test.ts`}</Code>
+      <p>Your game runs as plain TypeScript, so tests are instant — no build, no Docker:</p>
+      <Code>{`npm test`}</Code>
       <p>
         Drive the match with <code>createMatch</code>, <code>applyMove</code>, and
         <code> getPlayerView</code>, and assert on setup, legal/illegal moves, redaction (that a player's
@@ -567,33 +539,22 @@ function Sandbox() {
         If you implement <code>enumerate</code>, the engine's seeded bots can play your game to
         completion. Play a random game, then <code>replay</code> the move log and assert the final state
         is byte-identical — the determinism check that guarantees your game behaves the same in the WASM
-        sandbox as it does in Node.
+        sandbox as in Node.
       </p>
-      <Code>{`import { createMatch, randomBotMove, applyMove, replay, movesFromLog } from "../../../packages/engine/src/index.ts";
+      <Code>{`import { createMatch, applyMove, randomBotMove, replay, movesFromLog, Rng, seedFromString } from "@bordiko/sdk";
+import game from "./src/game.ts";
 
 let s = createMatch(game, { players: ["a", "b"], seed: "fuzz" });
 while (!s.ended) {
-  const mv = randomBotMove(game, s, s.flow.currentPlayer, "botseed:" + s.log.length);
+  const mv = randomBotMove(game, s, new Rng(seedFromString("bot:" + s.log.length)));
+  if (!mv) break;
   s = applyMove(game, s, mv).state;
 }
 const replayed = replay(game, s.seed, ["a", "b"], movesFromLog(s));
-// assert deepEqual(replayed.G, s.G)`}</Code>
-
-      <h2>The local dev harness</h2>
-      <p>Point the sandbox at your game folder — no build, no Docker, no login:</p>
-      <Code>{`npm run sandbox -- games/my-game`}</Code>
-      <p>It opens a browser harness that drives the same reducer the WASM host runs. In it you can:</p>
-      <ul className="doc-list">
-        <li><b>Play every seat</b> — click a seat to sit in it; each seat sees only its own redacted view, so you can test hidden information from every angle.</li>
-        <li><b>Fill seats with bots</b> — flip any seat to a bot, then <i>Step</i> one move at a time or <i>auto-play</i>. Bots use your <code>enumerate</code>; set every seat to a bot to watch a whole game.</li>
-        <li><b>Hot-reload on save</b> — edit your game and the match restarts with the new rules instantly.</li>
-        <li><b>Preview your custom UI</b> — a <code>ui.html</code> loads in the same locked-down sandbox iframe players get, over the real message bridge.</li>
-        <li><b>Inspect everything</b> — a live panel shows the phase and turn, the current seat's redacted state, its legal moves, and the move log.</li>
-      </ul>
-      <p>Options: <code>--seats N</code>, <code>--seed &lt;s&gt;</code>, <code>--port &lt;p&gt;</code>, and <code>--config '&#123;...&#125;'</code> for table options like teams.</p>
+// assert.deepEqual(replayed.G, s.G)`}</Code>
       <Callout kind="tip">
-        For a full end-to-end check against the real gateway and game host — accounts, lobby, WebSocket,
-        chat — run <code>npm run dev</code> and open two browser tabs.
+        The sandbox runs the real engine, so it's all you need to build and tune your game. Publishing is
+        what puts it in front of other players.
       </Callout>
     </article>
   );
