@@ -59,6 +59,7 @@ body {
   color: var(--text);
   font: 15px/1.55 var(--font-body);
   min-height: 100vh;
+  overflow-x: hidden; /* no game board or wide card fan should scroll the page sideways */
   -webkit-font-smoothing: antialiased;
 }
 ::selection { background: var(--tint-purple); }
@@ -253,12 +254,15 @@ code { font-family: var(--font-mono); }
 
 /* ------------------------------ modal / chooser --------------------------- */
 
+/* Backdrops scroll and top-align; the dialog uses `margin:auto` so it centres
+   when it fits and stays fully reachable (scrollable, not clipped at the top)
+   when it is taller than the viewport. `align-items:center` would clip the top. */
 .modal-backdrop {
-  position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
-  padding: 24px; background: rgba(20, 15, 30, 0.44); backdrop-filter: blur(2px);
+  position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-start; justify-content: center;
+  padding: 24px; overflow-y: auto; background: rgba(20, 15, 30, 0.44); backdrop-filter: blur(2px);
 }
 .modal {
-  position: relative; background: var(--card); border: 1px solid var(--line);
+  position: relative; margin: auto; background: var(--card); border: 1px solid var(--line);
   border-radius: 22px; box-shadow: var(--shadow-pop); padding: 26px; width: 100%; max-width: 460px;
 }
 .modal-x {
@@ -572,9 +576,9 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 
 /* ------------------------------ game over -------------------------------- */
 
-.gameover-backdrop { position: fixed; inset: 0; background: rgba(20, 15, 30, 0.5); display: grid; place-items: center; z-index: 200; padding: 20px; animation: go-fade 0.2s ease; }
+.gameover-backdrop { position: fixed; inset: 0; background: rgba(20, 15, 30, 0.5); display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; z-index: 200; padding: 20px; animation: go-fade 0.2s ease; }
 @keyframes go-fade { from { opacity: 0; } to { opacity: 1; } }
-.gameover { position: relative; background: var(--card); border-radius: 24px; padding: 34px 40px; text-align: center; max-width: 420px; width: 100%; box-shadow: var(--shadow-pop); animation: go-pop 0.34s cubic-bezier(0.2, 1.2, 0.4, 1); }
+.gameover { position: relative; margin: auto; background: var(--card); border-radius: 24px; padding: 34px 40px; text-align: center; max-width: 420px; width: 100%; box-shadow: var(--shadow-pop); animation: go-pop 0.34s cubic-bezier(0.2, 1.2, 0.4, 1); }
 @keyframes go-pop { from { transform: scale(0.9) translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
 .gameover.win { border-top: 5px solid var(--yellow); }
 .gameover.lose { border-top: 5px solid var(--line-2); }
@@ -644,8 +648,8 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 .eb-hint { text-align: center; }
 
 /* wild-8 suit picker */
-.eb-picker-backdrop { position: fixed; inset: 0; background: rgba(20, 15, 30, 0.42); display: grid; place-items: center; z-index: 100; }
-.eb-picker { background: var(--card); border-radius: 20px; padding: 22px 24px; box-shadow: var(--shadow-pop); text-align: center; }
+.eb-picker-backdrop { position: fixed; inset: 0; background: rgba(20, 15, 30, 0.42); display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 20px; z-index: 100; }
+.eb-picker { margin: auto; background: var(--card); border-radius: 20px; padding: 22px 24px; box-shadow: var(--shadow-pop); text-align: center; }
 .eb-picker-title { font-family: var(--font-display); font-weight: 700; font-size: 16px; margin-bottom: 16px; }
 .eb-picker-suits { display: flex; gap: 12px; }
 .eb-picker-suit { background: var(--card); border: 1.5px solid var(--line-2); border-radius: 14px; padding: 14px; cursor: pointer; display: grid; place-items: center; }
@@ -654,6 +658,22 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 @media (prefers-reduced-motion: reduce) {
   .eb-discard-top { animation: none; }
   .eb-lift, .eb-slot, .eb-deck-stack { transition: none; }
+}
+
+/* phones: shrink the felt piles and make the hand a swipeable, flattened fan */
+@media (max-width: 640px) {
+  .eb-table { gap: 18px; padding: 20px 12px; min-height: 0; }
+  .eb-pile { width: 92px; height: 128px; }
+  .eb-pile svg, .eb-deck-stack svg { width: 92px; height: auto; }
+  .eb-deck-stack::before, .eb-deck-stack::after { display: none; }
+  .eb-opp-card svg { width: 34px; height: auto; }
+  .eb-opponents { gap: 20px; min-height: 0; }
+  .eb-hand {
+    overflow-x: auto; overflow-y: hidden; justify-content: flex-start;
+    padding: 26px 8px 6px; min-height: 0; -webkit-overflow-scrolling: touch;
+  }
+  .eb-hand .eb-lift svg { width: 80px; height: auto; }
+  .eb-slot { flex: 0 0 auto; transform: none; }
 }
 
 /* generic auto board */
@@ -849,6 +869,7 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 @media (max-width: 640px) {
   .catalog { grid-template-columns: 1fr; }
   .topbar { flex-wrap: wrap; }
+  .nav { flex-wrap: wrap; }
   .user { width: 100%; margin-left: 0; }
   .featured { flex-direction: column; }
   .featured-art { width: 100%; height: 120px; font-size: 64px; }
@@ -856,6 +877,15 @@ button.danger:hover:not(:disabled) { background: #b42318; }
   .detail-art { width: 100%; height: 150px; font-size: 72px; }
   .detail-title { font-size: 30px; }
   .profile-totals { gap: 18px; }
+}
+
+/* Small phones: tighten the overlay padding so capped dialogs use the width. */
+@media (max-width: 560px) {
+  .modal-backdrop, .gameover-backdrop, .jk-picker-backdrop, .eb-picker-backdrop { padding: 12px; }
+  .modal { padding: 20px; }
+  .gameover { padding: 28px 22px; }
+  .go-title { font-size: 28px; }
+  .go-emoji { font-size: 48px; }
 }
 
 /* ================================ Jokeri ================================== */
@@ -1161,9 +1191,9 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 .jk-hint { text-align: center; }
 
 /* Joker high/low picker */
-.jk-picker-backdrop { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
-  background: rgba(20,15,30,0.44); backdrop-filter: blur(2px); padding: 24px; }
-.jk-picker { background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow-pop);
+.jk-picker-backdrop { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-start; justify-content: center;
+  overflow-y: auto; background: rgba(20,15,30,0.44); backdrop-filter: blur(2px); padding: 24px; }
+.jk-picker { margin: auto; background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow-pop);
   padding: 20px 22px; width: 100%; max-width: 380px; text-align: center; }
 .jk-picker-title { font-family: var(--font-display); font-weight: 700; font-size: 17px; }
 .jk-picker-modes { display: flex; gap: 10px; margin-top: 12px; }
@@ -1181,6 +1211,58 @@ button.danger:hover:not(:disabled) { background: #b42318; }
   .jokeri { grid-template-columns: 1fr; }
   .jk-paper { order: 2; }
   .jk-sheet-scroll { max-height: 52vh; }
+}
+
+/* -------- phones: Jokeri is unplayable with the desktop felt/hand sizes -------
+   Restack the felt (opponents in a top strip, felt full-width, you below),
+   shrink the cards on the felt, and turn your hand into a swipeable, flattened,
+   smaller fan so every card is reachable on a 360px screen. */
+@media (max-width: 640px) {
+  .jk-table { gap: 10px; }
+  .jk-felt-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: auto minmax(180px, 38vh) auto;
+    grid-template-areas:
+      "west  north east"
+      "felt  felt  felt"
+      "south south south";
+    gap: 6px;
+  }
+  .jk-seat { gap: 3px; max-width: 100%; }
+  .jk-seat-plate { min-width: 0; padding: 4px 8px; }
+  .jk-seat-name { max-width: 74px; font-size: 12px; }
+  .jk-seat.south { justify-content: center; }
+  .jk-felt { min-height: 180px; border-width: 4px; }
+
+  /* scale the felt cards + koziri so four converge cleanly on a phone-width felt */
+  .jk-felt .jk-play svg,
+  .jk-felt .jk-collect-card svg { width: 56px; height: auto; }
+  .jk-koziri-card svg { width: 46px; height: auto; }
+  .jk-koziri { top: 8px; left: 8px; gap: 3px; }
+  .jk-koziri-lbl { font-size: 8px; padding: 1px 6px; }
+  .jk-play.west { left: 8px; }
+  .jk-play.east { right: 8px; }
+  .jk-bidsum { font-size: 11px; padding: 4px 9px; top: 8px; }
+  .jk-called { font-size: 10px; top: 6px; right: 6px; padding: 2px 6px; }
+  .jk-lasttrick { left: 6px; bottom: 6px; padding: 4px 6px; }
+  .jk-minifan svg { width: 30px; height: auto; }
+  .jk-minicard { margin-left: -20px; }
+
+  /* your hand: a swipeable, flattened, slightly smaller fan (no card gets cut off) */
+  .jk-hand {
+    overflow-x: auto; overflow-y: hidden;
+    justify-content: flex-start; min-height: 0; padding: 12px 8px 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .jk-hand .jk-lift svg { width: 74px; height: auto; }
+  .jk-slot { flex: 0 0 auto; transform: none; }
+  .jk-slot:hover { transform: translateY(-10px) scale(1.02); }
+  .jk-slot.playable:hover { transform: translateY(-14px) scale(1.04); }
+
+  /* action panels wrap tightly */
+  .jk-panel { padding: 8px 10px; gap: 8px; }
+  .jk-bid-btn { min-width: 34px; padding: 7px 0; }
+  .jk-sheet-scroll { max-height: 46vh; }
 }
 
 /* ---------------- SchemaBoard: the generic declarative renderer ------------- */
