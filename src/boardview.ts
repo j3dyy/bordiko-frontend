@@ -3,6 +3,8 @@
 // as a local mirror because it crosses the JSON boundary — same pattern as wire.ts
 // mirroring the wire protocol.
 
+import { GATEWAY } from "./api.ts";
+
 export interface AssetRef {
   asset: string;
 }
@@ -72,5 +74,5 @@ export interface PromptOption {
 // Where a game publishes its assets (Phase 1c). Until uploads ship, `art` refs
 // simply fall back to emoji/initials in the renderer.
 export function assetUrl(gameId: string, ref: AssetRef): string {
-  return `/api/games/${encodeURIComponent(gameId)}/assets/${encodeURIComponent(ref.asset)}`;
+  return `${GATEWAY}/api/games/${encodeURIComponent(gameId)}/assets/${encodeURIComponent(ref.asset)}`;
 }

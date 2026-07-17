@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { GATEWAY } from "./api.ts";
 import type { StateMsg } from "./wire.ts";
 
 // Option 2: a game's OWN front-end, loaded in a locked-down iframe.
@@ -76,7 +77,7 @@ export function SandboxBoard({
     <iframe
       ref={ref}
       className="sandbox-frame"
-      src={`/api/games/${encodeURIComponent(gameId)}/ui`}
+      src={`${GATEWAY}/api/games/${encodeURIComponent(gameId)}/ui`}
       sandbox="allow-scripts"
       title="game board"
       onLoad={push}
