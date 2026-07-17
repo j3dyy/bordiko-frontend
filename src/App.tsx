@@ -8,6 +8,7 @@ import { GameDetail } from "./GameDetail.tsx";
 import { Profile } from "./Profile.tsx";
 import { Leaderboard } from "./Leaderboard.tsx";
 import { Admin } from "./Admin.tsx";
+import { Developers } from "./Developers.tsx";
 import { fetchActive, leaveMatch, type ActiveMatch } from "./api.ts";
 import { gameMeta } from "./games.ts";
 import { useT, LANGS } from "./i18n.tsx";
@@ -21,6 +22,7 @@ type View =
   | { screen: "waiting"; lobbyId: string }
   | { screen: "game"; matchId: string; gameId: string }
   | { screen: "leaderboard"; gameId?: string }
+  | { screen: "developers"; page?: string }
   | { screen: "admin" };
 
 // The view is mirrored in the URL path (History API) so links are clean and
@@ -35,6 +37,7 @@ function viewToPath(v: View): string {
     case "waiting": return `/waiting/${encodeURIComponent(v.lobbyId)}`;
     case "game": return `/play/${encodeURIComponent(v.matchId)}/${encodeURIComponent(v.gameId)}`;
     case "admin": return "/admin";
+    case "developers": return v.page ? `/developers/${encodeURIComponent(v.page)}` : "/developers";
     default: return "/";
   }
 }
@@ -44,6 +47,7 @@ function pathToView(pathname: string): View {
   if (seg[0] === "games" && seg[1]) return { screen: "detail", gameId: seg[1] };
   if (seg[0] === "me") return { screen: "profile" };
   if (seg[0] === "admin") return { screen: "admin" };
+  if (seg[0] === "developers") return { screen: "developers", page: seg[1] };
   if (seg[0] === "leaderboard") return { screen: "leaderboard", gameId: seg[1] };
   if (seg[0] === "waiting" && seg[1]) return { screen: "waiting", lobbyId: seg[1] };
   if (seg[0] === "play" && seg[1] && seg[2]) return { screen: "game", matchId: seg[1], gameId: seg[2] };
@@ -87,6 +91,19 @@ export function App() {
       <div className="app center">
         <div className="spinner" />
       </div>
+    );
+  }
+
+  // Developer docs are public — a prospective author can read them (and reach the
+  // sandbox instructions) without an account. Rendered before the login gate.
+  if (view.screen === "developers") {
+    return (
+      <Developers
+        page={view.page}
+        signedIn={!!user}
+        onNavigate={(page) => navigate({ screen: "developers", page })}
+        onExit={() => navigate({ screen: "home" })}
+      />
     );
   }
 
@@ -134,6 +151,9 @@ export function App() {
               onClick={() => navigate({ screen: "profile" })}
             >
               {t("nav.profile")}
+            </button>
+            <button className="nav-link" onClick={() => navigate({ screen: "developers" })}>
+              {t("nav.developers")}
             </button>
             {user.isAdmin && (
               <button
