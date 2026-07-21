@@ -1338,7 +1338,8 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 
 /* ---------------- SandboxBoard: a game's own UI in a locked-down iframe ------ */
 .sandbox-frame {
-  width: 100%; height: min(72vh, 680px); border: 1px solid var(--line); border-radius: var(--radius);
+  width: 100%; height: clamp(560px, calc(100vh - 210px), 1080px);
+  border: 1px solid var(--line); border-radius: var(--radius);
   background: var(--panel); box-shadow: var(--shadow-card); display: block;
 }
 
