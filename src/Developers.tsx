@@ -189,11 +189,6 @@ function Quickstart() {
       <h1>Quickstart</h1>
       <p className="doc-lede">Scaffold a game, play it against bots, compile it to WebAssembly, and publish it — all from your own project, with just Node installed.</p>
 
-      <Callout kind="note">
-        <b>Early access.</b> The <code>@bordiko/sdk</code> and <code>@bordiko/cli</code> packages are still
-        rolling out. If the commands below can't find them yet, get in touch and we'll get you access.
-      </Callout>
-
       <h2>1. Scaffold a game</h2>
       <p>You need <b>Node 22.6+</b> — and nothing else (the build step fetches its own compiler; no Docker).</p>
       <Code>{`npm create @bordiko/game my-game
