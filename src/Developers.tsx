@@ -16,6 +16,7 @@ const PAGES: DocPage[] = [
   { id: "quickstart", title: "Quickstart" },
   { id: "game-api", title: "Game API" },
   { id: "rendering", title: "Rendering your game" },
+  { id: "realtime", title: "Real-time games" },
   { id: "publishing", title: "Publishing" },
   { id: "sandbox", title: "Testing & the sandbox" },
 ];
@@ -128,6 +129,7 @@ function Content({ id, onNavigate }: { id: string; onNavigate: (page: string) =>
     case "quickstart": return <Quickstart />;
     case "game-api": return <GameApi />;
     case "rendering": return <Rendering />;
+    case "realtime": return <Realtime />;
     case "publishing": return <Publishing />;
     case "sandbox": return <Sandbox />;
     default: return <Overview onNavigate={onNavigate} />;
@@ -164,6 +166,11 @@ function Overview({ onNavigate }: { onNavigate: (page: string) => void }) {
         <li><b>endIf</b> <span className="doc-opt">(optional)</span> — decide when someone has won.</li>
         <li><b>enumerate</b> <span className="doc-opt">(optional)</span> — list the legal moves; this powers bots and a zero-effort default UI.</li>
       </ul>
+      <p>
+        That is a <b>turn-based</b> game. To build a <b>real-time action</b> game — where the world keeps
+        moving on its own, with both players acting at once — you add one more function, <code>tick</code>,
+        and the host drives a fixed-rate clock. See <b>Real-time games</b>.
+      </p>
 
       <h2>Three ways to show it</h2>
       <p>You choose how much UI to write — from none at all to a fully bespoke board:</p>
@@ -177,6 +184,7 @@ function Overview({ onNavigate }: { onNavigate: (page: string) => void }) {
         <Card title="Quickstart →" desc="Build, test, and publish your first game end to end." onClick={() => onNavigate("quickstart")} />
         <Card title="Game API →" desc="Every field of a game definition, with signatures." onClick={() => onNavigate("game-api")} />
         <Card title="Rendering →" desc="Legal-move buttons, board schema, or a custom UI." onClick={() => onNavigate("rendering")} />
+        <Card title="Real-time games →" desc="Continuous action: a tick clock, simultaneous input, physics." onClick={() => onNavigate("realtime")} />
         <Card title="Publishing →" desc="The manifest, the validation gates, and going live." onClick={() => onNavigate("publishing")} />
       </div>
     </article>
@@ -297,6 +305,8 @@ function GameApi() {
   endIf?:      (G: S, flow: FlowState) => GameResult | void;
   enumerate?:  (G: S, playerId: string, flow: FlowState) => MoveDescriptor[];
   initialActive?: (G: S) => string[] | undefined;   // simultaneous opening
+
+  tick?: (G: S, dt: number, ctx: TickContext) => void;  // real-time — see "Real-time games"
 }`}</Code>
 
       <h2>setup(ctx)</h2>
@@ -451,6 +461,108 @@ function Rendering() {
   );
 }
 
+function Realtime() {
+  return (
+    <article className="doc">
+      <h1>Real-time games</h1>
+      <p className="doc-lede">
+        Most Bordiko games are turn-based — the world only changes when someone moves. A <b>real-time</b>
+        game keeps moving on its own: platforms slide, projectiles fly, and both players act at once. You
+        opt in with one manifest flag and one extra reducer function; everything else — sandbox, matchmaking,
+        chat, reconnection — is identical.
+      </p>
+
+      <h2>How it works</h2>
+      <p>
+        When your game is real-time, the host runs a <b>fixed-rate clock</b>: while a match is being watched,
+        it calls your <code>tick(G, dt)</code> that many times per second to advance the world. Players don't
+        take turns — everyone can send input at any moment, and the clock integrates it. The clock stops when
+        the room empties or the match ends.
+      </p>
+
+      <h2>1. The tick handler</h2>
+      <p>Add <code>tick</code> to your definition. <code>dt</code> is the <b>fixed</b> timestep in milliseconds (from your declared rate) — never a wall-clock delta, so replays stay byte-identical.</p>
+      <Code>{`interface TickContext {
+  dt: number;                                 // fixed timestep (ms) = 1000 / tickRate
+  random: RandomAPI;                          // seeded — shared with moves
+  emit: (type: string, data?: Json) => void;  // UI/animation events
+  endGame: (result: GameResult) => void;      // e.g. a player was pushed out
+}
+
+tick: (G, dt, ctx) => {
+  const step = dt / 1000;                     // seconds
+  for (const b of G.bodies) {                 // step your physics by the FIXED step
+    b.x += b.vx * step;
+    b.y += b.vy * step;
+  }
+}`}</Code>
+
+      <h2>2. Buffer input, integrate it in tick</h2>
+      <p>
+        The real-time convention: a move only <i>records</i> a player's intent into the state; <code>tick</code>
+        reads it and advances the sim. This keeps input and simulation cleanly separated and fully
+        deterministic. Seed <code>initialActive</code> with every seat so all players can act at once.
+      </p>
+      <Code>{`initialActive: (G) => G.bodies.map((b) => b.id),   // everyone active — no turns
+
+moves: {
+  // Records the held thrust direction; does NOT move anything itself.
+  input: (G, payload, ctx) => {
+    const b = G.bodies.find((x) => x.id === ctx.playerId);
+    if (!b) return INVALID_MOVE;
+    b.ax = clampUnit((payload as any).ax);
+    b.ay = clampUnit((payload as any).ay);
+  },
+},`}</Code>
+
+      <h2>3. Declare it in the manifest</h2>
+      <Code>{`"bordiko": {
+  "gameId": "sumo",
+  "displayName": "Sumo",
+  "minPlayers": 2, "maxPlayers": 2,
+  "board": "custom",
+  "realtime": { "tick": true, "tickRate": 15 }   // ticks per second, max 30
+}`}</Code>
+
+      <h2>4. A UI that interpolates</h2>
+      <p>
+        The host sends state at the tick rate; your UI smooths between frames. Subscribe with the same
+        bridge from <b>Rendering</b>, send <code>input</code> moves, and render on
+        <code> requestAnimationFrame</code>, easing toward the latest snapshot:
+      </p>
+      <Code>{`let latest = null;
+window.addEventListener("message", (e) => { if (e.data?.t === "bordiko:state") latest = e.data.state; });
+
+// hold a key -> send the thrust vector once, on change
+function onInput(ax, ay) { window.parent.postMessage({ t: "bordiko:move", type: "input", payload: { ax, ay } }, "*"); }
+
+function frame() {
+  requestAnimationFrame(frame);
+  if (!latest) return;
+  for (const b of latest.G.bodies) drawEased(b);   // lerp render pos -> b
+}
+requestAnimationFrame(frame);`}</Code>
+      <p>
+        Fullscreen is one line — a sandboxed UI can't call the Fullscreen API itself, so ask the host:
+        <code> connectBordiko().fullscreen()</code> (or post <code>{`{ t: "bordiko:fullscreen" }`}</code>).
+      </p>
+
+      <Callout kind="warn">
+        <b>Determinism still rules.</b> In <code>tick</code>, use only the fixed <code>dt</code> and
+        <code> ctx.random</code> — never <code>Date</code> or <code>Math.random()</code>. And because the UI
+        runs under a no-network sandbox, it can't open its own socket: all sync flows through the host clock.
+        PixiJS works, but import <code>@pixi/unsafe-eval</code> (the CSP forbids <code>eval</code>); plain
+        canvas 2D needs nothing.
+      </Callout>
+
+      <Callout kind="tip">
+        The reference is <code>games/sumo</code> — a 2-player physics duel: a deterministic reducer, its
+        tests, and a self-contained canvas UI you can copy from.
+      </Callout>
+    </article>
+  );
+}
+
 function Publishing() {
   return (
     <article className="doc">
@@ -471,6 +583,8 @@ function Publishing() {
   "categories": ["strategy"],
   "board": "grid"             // grid | hex | network | tableau | custom
 }`}</Code>
+      <p>A <b>real-time</b> game adds a <code>realtime</code> block so the host drives its clock (see <b>Real-time games</b>):</p>
+      <Code>{`"realtime": { "tick": true, "tickRate": 15 }   // ticks per second, max 30`}</Code>
 
       <h2>The command</h2>
       <p>From your game project, after <code>npm run build</code>:</p>
