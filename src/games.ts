@@ -82,6 +82,26 @@ const KNOWN: Record<string, Omit<GameMeta, "id">> = {
       "When someone drops to two trains the final round begins; then score routes + longest line + destinations.",
     ],
   },
+  sumo: {
+    name: "Sumo",
+    blurb: "Real-time physics duel: thrust with WASD and shove your rival off the ring. Momentum carries — the world never stops.",
+    minPlayers: 2,
+    maxPlayers: 2,
+    renderer: "auto", // ships its own sandboxed real-time canvas UI — auto-detected via the catalog's hasUI flag
+    accent: "#17C0A4",
+    emoji: "🤼",
+    category: "Action / Real-time",
+    author: "@bordiko",
+    verified: true,
+    objective: "Push the other disk's centre past the ring edge. If nobody falls before time, the disk nearer the centre wins.",
+    howTo: [
+      "Both players move at the same time — there are no turns.",
+      "Hold WASD or the arrow keys to thrust; release to coast (momentum and friction do the rest).",
+      "Ram your rival to build a shove; catch them off-balance and drive them over the edge.",
+      "Stay near the centre — a disk pushed past the ring loses instantly.",
+      "Use the ⛶ button for fullscreen.",
+    ],
+  },
   "king-of-tokyo": {
     name: "King of Tokyo",
     blurb: "Roll dice, grab Tokyo, smash your rivals. Push your luck across three rolls.",

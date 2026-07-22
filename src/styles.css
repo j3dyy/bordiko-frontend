@@ -510,6 +510,15 @@ button.danger:hover:not(:disabled) { background: #b42318; }
 .game-stage { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; margin-top: 4px; }
 .game-main { min-width: 0; position: relative; }
 
+/* Host-owned fullscreen: the whole stage becomes the fullscreen root, so every
+   renderer (SVG boards, card tables, and sandbox action games alike) fills the
+   screen. Board grows to the viewport; chat rides alongside. */
+.fullscreen-toggle { font-size: 15px; line-height: 1; }
+.game-stage:fullscreen { height: 100vh; background: var(--canvas); padding: 16px; gap: 16px; align-items: stretch; margin-top: 0; overflow: hidden; }
+.game-stage:fullscreen .game-main { display: flex; flex-direction: column; min-height: 0; }
+.game-stage:fullscreen .sandbox-frame { flex: 1; height: auto; max-height: none; }
+.game-stage:fullscreen .chat { height: 100%; }
+
 /* quick reactions (emotes) */
 .emote-bar { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 10px 4px; border-top: 1px solid var(--line); }
 .emote-btn { background: var(--panel); border: 1px solid var(--line-2); border-radius: 9px; padding: 3px 7px; font-size: 17px; line-height: 1.1; cursor: pointer; }

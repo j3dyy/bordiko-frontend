@@ -17,11 +17,14 @@ export function SandboxBoard({
   playerId,
   gameId,
   onMove,
+  onRequestFullscreen,
 }: {
   state: StateMsg;
   playerId: string;
   gameId: string;
   onMove: (type: string, payload?: Record<string, unknown>) => void;
+  /** The bundle asked (via `bordiko:fullscreen`) for the host to toggle fullscreen. */
+  onRequestFullscreen?: () => void;
 }) {
   const ref = useRef<HTMLIFrameElement>(null);
   const lang = (() => {
@@ -67,11 +70,12 @@ export function SandboxBoard({
       if (!m || typeof m !== "object") return;
       if (m.t === "bordiko:ready") push();
       else if (m.t === "bordiko:move" && typeof m.type === "string") onMove(m.type, m.payload);
+      else if (m.t === "bordiko:fullscreen") onRequestFullscreen?.();
     };
     window.addEventListener("message", onMsg);
     return () => window.removeEventListener("message", onMsg);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, onMove]);
+  }, [state, onMove, onRequestFullscreen]);
 
   return (
     <iframe
@@ -79,6 +83,7 @@ export function SandboxBoard({
       className="sandbox-frame"
       src={`${GATEWAY}/api/games/${encodeURIComponent(gameId)}/ui`}
       sandbox="allow-scripts"
+      allow="fullscreen"
       title="game board"
       onLoad={push}
     />

@@ -62,6 +62,8 @@ export function Game({
 }) {
   const { t } = useT();
   const { state, connected, errors, chat, emotes, sendMove, sendChat, sendEmote } = useMatch(matchId, playerId);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const { isFull, toggleFullscreen } = useFullscreen(stageRef);
 
   // Sound each incoming reaction once (ring for the bell, a soft blip otherwise).
   const lastEmoteId = useRef(0);
@@ -126,6 +128,14 @@ export function Game({
         {state?.ended && <span className="result">{resultText(state, playerId, t)}</span>}
         <span className="statusbar-actions">
           <SoundToggle />
+          <button
+            className="ghost fullscreen-toggle"
+            onClick={toggleFullscreen}
+            title={isFull ? t("game.exitFullscreen") : t("game.fullscreen")}
+            aria-label={isFull ? t("game.exitFullscreen") : t("game.fullscreen")}
+          >
+            {isFull ? "🡼" : "⛶"}
+          </button>
           <button className="ghost" onClick={onLeave} title={t("game.backTitle")}>
             {t("game.back")}
           </button>
@@ -137,7 +147,7 @@ export function Game({
         </span>
       </div>
 
-      <div className="game-stage">
+      <div className={`game-stage${isFull ? " fullscreen" : ""}`} ref={stageRef}>
         <div className="game-main">
           {state ? (
             meta.renderer === "hive" ? (
@@ -147,7 +157,7 @@ export function Game({
             ) : meta.renderer === "jokeri" ? (
               <JokeriBoard state={state} playerId={playerId} onMove={sendMove} />
             ) : meta.renderer === "sandbox" || hasUI ? (
-              <SandboxBoard state={state} playerId={playerId} gameId={gameId} onMove={sendMove} />
+              <SandboxBoard state={state} playerId={playerId} gameId={gameId} onMove={sendMove} onRequestFullscreen={toggleFullscreen} />
             ) : state.G?.board ? (
               <SchemaBoard state={state} playerId={playerId} gameId={gameId} onMove={sendMove} />
             ) : (
@@ -203,6 +213,26 @@ export function Game({
       )}
     </div>
   );
+}
+
+// Host-owned fullscreen for the game stage. The board runs in a sandboxed
+// opaque-origin iframe that can't call the Fullscreen API on itself, so the
+// trusted host toggles it on the stage container (works for every renderer, and
+// for a sandbox game that requests it via the `bordiko:fullscreen` postMessage).
+function useFullscreen(ref: React.RefObject<HTMLElement | null>) {
+  const [isFull, setIsFull] = useState(false);
+  useEffect(() => {
+    const onChange = () => setIsFull(document.fullscreenElement === ref.current);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, [ref]);
+  const toggleFullscreen = () => {
+    const el = ref.current;
+    if (!el) return;
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void el.requestFullscreen?.().catch(() => {});
+  };
+  return { isFull, toggleFullscreen };
 }
 
 // Mute/unmute the game's sound effects (persisted in localStorage).
