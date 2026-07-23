@@ -122,6 +122,26 @@ const KNOWN: Record<string, Omit<GameMeta, "id">> = {
       "Before rolling you may offer the doubling cube to raise the stakes; your opponent takes (and takes the cube) or drops to concede.",
     ],
   },
+  "arena-shooter": {
+    name: "Arena Shooter",
+    blurb: "2–10 player real-time 3D deathmatch. Move, aim, and blast your rivals — grab the machine gun, dodge the crossfire, first to the frag limit wins.",
+    minPlayers: 2,
+    maxPlayers: 10,
+    renderer: "auto", // ships its own sandboxed 3D WebGL UI — auto-detected via the catalog's hasUI flag
+    accent: "#7C60F5",
+    emoji: "🔫",
+    category: "Action / Shooter",
+    author: "@community",
+    verified: false,
+    objective: "Frag your opponents to reach the frag limit first. Grab guns and health — and remember, bullets can shoot each other down.",
+    howTo: [
+      "Everyone plays at once — no turns. WASD to move, mouse to aim, click or hold to fire.",
+      "Your default pistol has infinite ammo; land hits to drop enemies (each kill is a frag).",
+      "Grab the machine gun for rapid fire, or health to patch up — a dead player drops their gun.",
+      "Projectiles collide: opposing bullets crash into each other, so lead your shots.",
+      "First to the frag limit wins; you respawn a few seconds after dying.",
+    ],
+  },
   "king-of-tokyo": {
     name: "King of Tokyo",
     blurb: "Roll dice, grab Tokyo, smash your rivals. Push your luck across three rolls.",
