@@ -477,7 +477,8 @@ host.onChat(m => addLine(m.name + ": " + m.text)); // receive messages`}</Code>
       <Callout kind="tip">
         <b>Fullscreen is truly immersive.</b> When a player goes fullscreen the platform hides its own chat
         and rating chrome, so your UI fills the screen. Anything you draw yourself — HUD, your own chat —
-        goes with it. <code>games/arena-shooter</code> is a full example (3D WebGL UI + in-game chat).
+        goes with it. <code>games/arena-shooter</code> is a full example (3D WebGL UI, in-game chat, four
+        weapons with area-damage rockets, HP potions, floating damage numbers, and over-head HP bars).
       </Callout>
     </article>
   );
