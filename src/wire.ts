@@ -47,6 +47,22 @@ export interface MatchSummary {
   currentPlayer: string;
 }
 
+// A UI/animation event the reducer emitted via ctx.emit(type, data) on a move or
+// tick. Non-authoritative — relayed to the game's sandboxed UI for effects/sound.
+export interface GameEvent {
+  type: string;
+  data?: unknown;
+  turn: number;
+}
+
+// The gateway batches the events from one applied move/tick into a single frame.
+export interface EventsMsg {
+  t: "events";
+  matchId: string;
+  moveCount: number;
+  events: GameEvent[];
+}
+
 // A live in-game chat line (relayed by the gateway to everyone in the match).
 export interface ChatMsg {
   t: "chat";

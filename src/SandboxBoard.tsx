@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { GATEWAY } from "./api.ts";
 import type { StateMsg, ChatMsg } from "./wire.ts";
+import type { EventBatch } from "./useMatch.ts";
 
 // Option 2: a game's OWN front-end, loaded in a locked-down iframe.
 //
@@ -21,6 +22,7 @@ export function SandboxBoard({
   onLog,
   chat,
   onSendChat,
+  events,
 }: {
   state: StateMsg;
   playerId: string;
@@ -34,9 +36,12 @@ export function SandboxBoard({
   chat?: ChatMsg[];
   /** The game sent a chat message (via `bordiko:chat`) — forward it to the table. */
   onSendChat?: (text: string) => void;
+  /** Reducer-emitted UI/animation events (ctx.emit) to relay into the game. */
+  events?: EventBatch | null;
 }) {
   const ref = useRef<HTMLIFrameElement>(null);
   const sentChat = useRef(0);
+  const sentEventSeq = useRef(0);
   const lang = (() => {
     try {
       return localStorage.getItem("bordiko:lang") ?? "en";
@@ -82,6 +87,15 @@ export function SandboxBoard({
     }
     sentChat.current = chat.length;
   }, [chat]);
+
+  // Relay each batch of reducer-emitted events into the game (fire-and-forget,
+  // for effects/sound). Guard on the batch seq so a re-render never re-delivers.
+  useEffect(() => {
+    const frame = ref.current?.contentWindow;
+    if (!frame || !events || events.seq === sentEventSeq.current) return;
+    sentEventSeq.current = events.seq;
+    for (const event of events.events) frame.postMessage({ t: "bordiko:event", event }, "*");
+  }, [events]);
 
   // Accept ONLY move/chat/emote intents, ONLY from our own iframe.
   useEffect(() => {

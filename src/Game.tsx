@@ -62,7 +62,7 @@ export function Game({
   onLeaderboard?: () => void;
 }) {
   const { t } = useT();
-  const { state, connected, errors, chat, emotes, sendMove, sendChat, sendEmote } = useMatch(matchId, playerId);
+  const { state, connected, errors, chat, emotes, events, sendMove, sendChat, sendEmote } = useMatch(matchId, playerId);
   const stageRef = useRef<HTMLDivElement>(null);
   const { isFull, toggleFullscreen } = useFullscreen(stageRef);
   const { debug, setDebug } = useDebug();
@@ -163,7 +163,7 @@ export function Game({
             ) : meta.renderer === "jokeri" ? (
               <JokeriBoard state={state} playerId={playerId} onMove={sendMove} />
             ) : meta.renderer === "sandbox" || hasUI ? (
-              <SandboxBoard state={state} playerId={playerId} gameId={gameId} onMove={sendMove} onRequestFullscreen={toggleFullscreen} onLog={pushLog} chat={ownChat ? chat : undefined} onSendChat={ownChat ? sendChat : undefined} />
+              <SandboxBoard state={state} playerId={playerId} gameId={gameId} onMove={sendMove} onRequestFullscreen={toggleFullscreen} onLog={pushLog} chat={ownChat ? chat : undefined} onSendChat={ownChat ? sendChat : undefined} events={events} />
             ) : state.G?.board ? (
               <SchemaBoard state={state} playerId={playerId} gameId={gameId} onMove={sendMove} />
             ) : (

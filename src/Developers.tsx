@@ -466,6 +466,9 @@ const host = connectBordiko();
 host.fullscreen();               // ask the host to fullscreen the game stage
 host.debug("spawned", { x, y }); // send a line to the developer debug panel
 
+// Events: react to what the reducer emitted with ctx.emit(...) — effects & sound.
+host.onEvent(e => { if (e.type === "hit") spark(e.data); }); // fire-and-forget
+
 // Chat: render it INSIDE your game instead of the platform's sidebar.
 host.chat("gg");                 // send a message to the table
 host.onChat(m => addLine(m.name + ": " + m.text)); // receive messages`}</Code>
@@ -474,6 +477,30 @@ host.onChat(m => addLine(m.name + ": " + m.text)); // receive messages`}</Code>
         then <b>hides its default chat sidebar</b> (your board goes full-width) and relays messages into your
         UI via <code>onChat</code> — draw them however you like.
       </p>
+
+      <h2>Events — trigger effects &amp; sound from the reducer</h2>
+      <p>
+        Your reducer can <code>emit</code> a UI event from any move or tick. The host relays it to your UI,
+        where <code>host.onEvent</code> receives it. This is the clean way to fire a hit-spark, a sound, a
+        screen shake, or a floating damage number — <b>without diffing state</b> to guess what changed.
+      </p>
+      <Code>{`// reducer (runs server-side, in the WASM sandbox):
+hurt(target, dmg, ctx.emit);
+function hurt(p, dmg, emit) { p.hp -= dmg; emit("hit", { x: p.x, z: p.z, dmg }); }
+// on a rocket:  emit("blast", { x, z, r });
+
+// your UI:
+host.onEvent(e => {
+  if (e.type === "hit")   floatDamage(e.data.x, e.data.z, e.data.dmg);
+  if (e.type === "blast") spawnExplosion(e.data.x, e.data.z, e.data.r);
+});`}</Code>
+      <Callout kind="tip">
+        <b>Events are non-authoritative.</b> They are fire-and-forget presentation only: a UI that misses one
+        just skips that effect, and <b>replays and reconnection ignore them</b>. Never drive game logic from an
+        event — keep anything that must be true in the authoritative state <code>G</code>. Because they're not
+        state, they don't bloat what every client downloads each tick. <code>games/arena-shooter</code> uses
+        this exact pattern: its damage numbers and explosions are <code>emit</code>ted, not stored.
+      </Callout>
       <Callout kind="tip">
         <b>Fullscreen is truly immersive.</b> When a player goes fullscreen the platform hides its own chat
         and rating chrome, so your UI fills the screen. Anything you draw yourself — HUD, your own chat —

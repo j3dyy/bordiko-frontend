@@ -1,8 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { wsURL } from "./api.ts";
-import type { ChatMsg, EmoteMsg, StateMsg } from "./wire.ts";
+import type { ChatMsg, EmoteMsg, EventsMsg, GameEvent, StateMsg } from "./wire.ts";
 
 export type LiveEmote = EmoteMsg & { id: number };
+
+// One batch of reducer-emitted events, tagged with a monotonic sequence so the
+// sandbox relay can forward each batch exactly once (events fire-and-forget, so
+// we keep only the latest batch rather than an ever-growing log).
+export interface EventBatch {
+  seq: number;
+  events: GameEvent[];
+}
 
 export interface MatchConnection {
   state: StateMsg | null;
@@ -10,6 +18,7 @@ export interface MatchConnection {
   errors: string[];
   chat: ChatMsg[];
   emotes: LiveEmote[];
+  events: EventBatch | null;
   sendMove: (type: string, payload?: Record<string, unknown>) => void;
   sendChat: (text: string) => void;
   sendEmote: (emote: string) => void;
@@ -26,6 +35,7 @@ export function useMatch(matchId: string, playerId: string): MatchConnection {
   const [errors, setErrors] = useState<string[]>([]);
   const [chat, setChat] = useState<ChatMsg[]>([]);
   const [emotes, setEmotes] = useState<LiveEmote[]>([]);
+  const [events, setEvents] = useState<EventBatch | null>(null);
   const emoteId = useRef(0);
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -45,6 +55,9 @@ export function useMatch(matchId: string, playerId: string): MatchConnection {
         setEmotes((e) => [...e, { ...(msg as EmoteMsg), id }].slice(-10));
         // auto-clear once the pop/float animation is done
         setTimeout(() => setEmotes((e) => e.filter((x) => x.id !== id)), 4500);
+      } else if (msg.t === "events") {
+        const list = (msg as EventsMsg).events;
+        if (Array.isArray(list) && list.length) setEvents((b) => ({ seq: (b?.seq ?? 0) + 1, events: list }));
       } else if (msg.t === "move_err") {
         setErrors((e) => [`rejected: ${msg.reason}`, ...e].slice(0, 5));
       } else if (msg.t === "error") {
@@ -89,5 +102,5 @@ export function useMatch(matchId: string, playerId: string): MatchConnection {
     [matchId],
   );
 
-  return { state, connected, errors, chat, emotes, sendMove, sendChat, sendEmote };
+  return { state, connected, errors, chat, emotes, events, sendMove, sendChat, sendEmote };
 }
