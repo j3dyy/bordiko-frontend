@@ -102,6 +102,26 @@ const KNOWN: Record<string, Omit<GameMeta, "id">> = {
       "Use the ⛶ button for fullscreen.",
     ],
   },
+  backgammon: {
+    name: "Backgammon",
+    blurb: "The classic race game. Roll the dice, hit blots, bear off — and raise the stakes with the doubling cube.",
+    minPlayers: 2,
+    maxPlayers: 2,
+    renderer: "auto", // ships its own sandboxed board UI — auto-detected via the catalog's hasUI flag
+    accent: "#7c4a26",
+    emoji: "🎲",
+    category: "Classic / Dice",
+    author: "@bordiko",
+    verified: true,
+    objective: "Be first to bring all fifteen checkers home and bear them off. Gammons, backgammons, and the doubling cube multiply the score.",
+    howTo: [
+      "Each player races 15 checkers around to their home board, then bears them off — first to bear off all 15 wins.",
+      "Roll two dice and move a checker for each number to an open point (one not held by two or more enemy checkers); doubles play four times.",
+      "Land on a lone enemy checker (a blot) to hit it — it goes to the bar and must re-enter before that player moves anything else.",
+      "Once all your checkers are home, bear them off by rolling their point's number.",
+      "Before rolling you may offer the doubling cube to raise the stakes; your opponent takes (and takes the cube) or drops to concede.",
+    ],
+  },
   "king-of-tokyo": {
     name: "King of Tokyo",
     blurb: "Roll dice, grab Tokyo, smash your rivals. Push your luck across three rolls.",
