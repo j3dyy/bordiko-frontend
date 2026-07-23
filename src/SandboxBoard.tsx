@@ -20,6 +20,7 @@ export function SandboxBoard({
   onRequestFullscreen,
   onLog,
   chat,
+  onSendChat,
 }: {
   state: StateMsg;
   playerId: string;
@@ -31,6 +32,8 @@ export function SandboxBoard({
   onLog?: (entry: { level: string; message: string }) => void;
   /** Table chat to relay into the game (for games that render their own chat). */
   chat?: ChatMsg[];
+  /** The game sent a chat message (via `bordiko:chat`) — forward it to the table. */
+  onSendChat?: (text: string) => void;
 }) {
   const ref = useRef<HTMLIFrameElement>(null);
   const sentChat = useRef(0);
@@ -92,12 +95,15 @@ export function SandboxBoard({
       else if (m.t === "bordiko:log") {
         const l = m as unknown as { level?: string; message?: string };
         onLog?.({ level: String(l.level || "log"), message: String(l.message ?? "") });
+      } else if (m.t === "bordiko:chat") {
+        const c = m as unknown as { text?: string };
+        if (typeof c.text === "string") onSendChat?.(c.text);
       }
     };
     window.addEventListener("message", onMsg);
     return () => window.removeEventListener("message", onMsg);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, onMove, onRequestFullscreen, onLog]);
+  }, [state, onMove, onRequestFullscreen, onLog, onSendChat]);
 
   return (
     <iframe

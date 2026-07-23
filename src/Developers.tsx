@@ -457,6 +457,28 @@ function Rendering() {
         Once your published game includes a <code>ui.html</code>, the catalog detects it and players get
         your custom UI automatically.
       </p>
+
+      <h2>Chat, fullscreen &amp; host actions</h2>
+      <p>The bridge gives your UI a few more things the platform normally provides:</p>
+      <Code>{`import { connectBordiko } from "@bordiko/sdk/ui";
+const host = connectBordiko();
+
+host.fullscreen();               // ask the host to fullscreen the game stage
+host.debug("spawned", { x, y }); // send a line to the developer debug panel
+
+// Chat: render it INSIDE your game instead of the platform's sidebar.
+host.chat("gg");                 // send a message to the table
+host.onChat(m => addLine(m.name + ": " + m.text)); // receive messages`}</Code>
+      <p>
+        To take over chat, set <code>"ownChat": true</code> in your game's catalog metadata. The platform
+        then <b>hides its default chat sidebar</b> (your board goes full-width) and relays messages into your
+        UI via <code>onChat</code> — draw them however you like.
+      </p>
+      <Callout kind="tip">
+        <b>Fullscreen is truly immersive.</b> When a player goes fullscreen the platform hides its own chat
+        and rating chrome, so your UI fills the screen. Anything you draw yourself — HUD, your own chat —
+        goes with it. <code>games/arena-shooter</code> is a full example (3D WebGL UI + in-game chat).
+      </Callout>
     </article>
   );
 }

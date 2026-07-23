@@ -163,7 +163,7 @@ export function Game({
             ) : meta.renderer === "jokeri" ? (
               <JokeriBoard state={state} playerId={playerId} onMove={sendMove} />
             ) : meta.renderer === "sandbox" || hasUI ? (
-              <SandboxBoard state={state} playerId={playerId} gameId={gameId} onMove={sendMove} onRequestFullscreen={toggleFullscreen} onLog={pushLog} chat={ownChat ? chat : undefined} />
+              <SandboxBoard state={state} playerId={playerId} gameId={gameId} onMove={sendMove} onRequestFullscreen={toggleFullscreen} onLog={pushLog} chat={ownChat ? chat : undefined} onSendChat={ownChat ? sendChat : undefined} />
             ) : state.G?.board ? (
               <SchemaBoard state={state} playerId={playerId} gameId={gameId} onMove={sendMove} />
             ) : (
