@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { GATEWAY } from "./api.ts";
-import type { StateMsg } from "./wire.ts";
+import type { StateMsg, ChatMsg } from "./wire.ts";
 
 // Option 2: a game's OWN front-end, loaded in a locked-down iframe.
 //
@@ -19,6 +19,7 @@ export function SandboxBoard({
   onMove,
   onRequestFullscreen,
   onLog,
+  chat,
 }: {
   state: StateMsg;
   playerId: string;
@@ -28,8 +29,11 @@ export function SandboxBoard({
   onRequestFullscreen?: () => void;
   /** A log/error the sandboxed UI forwarded (for the developer debug panel). */
   onLog?: (entry: { level: string; message: string }) => void;
+  /** Table chat to relay into the game (for games that render their own chat). */
+  chat?: ChatMsg[];
 }) {
   const ref = useRef<HTMLIFrameElement>(null);
+  const sentChat = useRef(0);
   const lang = (() => {
     try {
       return localStorage.getItem("bordiko:lang") ?? "en";
@@ -64,6 +68,17 @@ export function SandboxBoard({
     push();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
+
+  // Relay new table chat into the game (for games that render their own chat).
+  useEffect(() => {
+    const frame = ref.current?.contentWindow;
+    if (!frame || !chat) return;
+    for (let i = sentChat.current; i < chat.length; i++) {
+      const c = chat[i];
+      frame.postMessage({ t: "bordiko:chat", msg: { from: c.from, name: c.name ?? "", text: c.text, ts: (c as { ts?: number }).ts ?? 0 } }, "*");
+    }
+    sentChat.current = chat.length;
+  }, [chat]);
 
   // Accept ONLY move/chat/emote intents, ONLY from our own iframe.
   useEffect(() => {

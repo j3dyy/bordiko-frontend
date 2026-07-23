@@ -514,10 +514,14 @@ button.danger:hover:not(:disabled) { background: #b42318; }
    renderer (SVG boards, card tables, and sandbox action games alike) fills the
    screen. Board grows to the viewport; chat rides alongside. */
 .fullscreen-toggle { font-size: 15px; line-height: 1; }
-.game-stage:fullscreen { height: 100vh; background: var(--canvas); padding: 16px; gap: 16px; align-items: stretch; margin-top: 0; overflow: hidden; }
+/* A game that renders its own chat drops the default sidebar → board full width. */
+.game-stage.no-chat { grid-template-columns: minmax(0, 1fr); }
+/* Fullscreen = truly immersive: single column, no chat panel, no rating bar. A
+   game's own UI (incl. any chat it renders inside its iframe) fills the screen. */
+.game-stage:fullscreen { height: 100vh; grid-template-columns: 1fr; background: #0a0d12; padding: 6px; gap: 0; align-items: stretch; margin-top: 0; overflow: hidden; }
 .game-stage:fullscreen .game-main { display: flex; flex-direction: column; min-height: 0; }
-.game-stage:fullscreen .sandbox-frame { flex: 1; height: auto; max-height: none; }
-.game-stage:fullscreen .chat { height: 100%; }
+.game-stage:fullscreen .sandbox-frame { flex: 1; height: auto; max-height: none; border: none; border-radius: 0; }
+.game-stage:fullscreen .chat, .game-stage:fullscreen .ratebar { display: none; }
 
 /* quick reactions (emotes) */
 .emote-bar { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 10px 4px; border-top: 1px solid var(--line); }

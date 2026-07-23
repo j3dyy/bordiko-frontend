@@ -18,6 +18,12 @@ export interface GameMeta {
   verified: boolean;
   objective: string;
   howTo: string[];
+  /**
+   * The game provides its OWN chat (in its custom UI) — so the platform hides its
+   * default chat sidebar and instead relays chat messages into the game's iframe
+   * (via `connectBordiko().onChat`). Good for immersive/real-time games.
+   */
+  ownChat?: boolean;
 }
 
 const KNOWN: Record<string, Omit<GameMeta, "id">> = {
@@ -133,6 +139,7 @@ const KNOWN: Record<string, Omit<GameMeta, "id">> = {
     category: "Action / Shooter",
     author: "@community",
     verified: false,
+    ownChat: true, // immersive real-time game — no default chat sidebar
     objective: "Frag your opponents to reach the frag limit first. Grab guns and health — and remember, bullets can shoot each other down.",
     howTo: [
       "Everyone plays at once — no turns. WASD to move, mouse to aim, click or hold to fire.",

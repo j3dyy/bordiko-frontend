@@ -80,6 +80,7 @@ export function Game({
     else soundEmote();
   }, [emotes]);
   const meta = gameMeta(gameId);
+  const ownChat = !!meta.ownChat; // game renders its own chat → hide the default panel
   // Auto-detect a marketplace game's custom UI bundle: if the catalog says this
   // game ships one, render it in the sandbox (no per-game curation needed).
   const [hasUI, setHasUI] = useState(false);
@@ -152,7 +153,7 @@ export function Game({
         </span>
       </div>
 
-      <div className={`game-stage${isFull ? " fullscreen" : ""}`} ref={stageRef}>
+      <div className={`game-stage${isFull ? " fullscreen" : ""}${ownChat ? " no-chat" : ""}`} ref={stageRef}>
         <div className="game-main">
           {state ? (
             meta.renderer === "hive" ? (
@@ -162,7 +163,7 @@ export function Game({
             ) : meta.renderer === "jokeri" ? (
               <JokeriBoard state={state} playerId={playerId} onMove={sendMove} />
             ) : meta.renderer === "sandbox" || hasUI ? (
-              <SandboxBoard state={state} playerId={playerId} gameId={gameId} onMove={sendMove} onRequestFullscreen={toggleFullscreen} onLog={pushLog} />
+              <SandboxBoard state={state} playerId={playerId} gameId={gameId} onMove={sendMove} onRequestFullscreen={toggleFullscreen} onLog={pushLog} chat={ownChat ? chat : undefined} />
             ) : state.G?.board ? (
               <SchemaBoard state={state} playerId={playerId} gameId={gameId} onMove={sendMove} />
             ) : (
@@ -185,7 +186,9 @@ export function Game({
           <EmoteLayer emotes={emotes} myId={playerId} />
         </div>
 
-        <Chat chat={chat} myId={playerId} connected={connected} onSend={sendChat} onEmote={sendEmote} />
+        {!ownChat && (
+          <Chat chat={chat} myId={playerId} connected={connected} onSend={sendChat} onEmote={sendEmote} />
+        )}
       </div>
 
       {state?.ended && !dismissed && (
