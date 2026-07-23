@@ -661,6 +661,23 @@ while (!s.ended) {
 }
 const replayed = replay(game, s.seed, ["a", "b"], movesFromLog(s));
 // assert.deepEqual(replayed.G, s.G)`}</Code>
+
+      <h2>The in-game debug panel</h2>
+      <p>
+        Your custom UI runs in a locked-down iframe, so its console is invisible from the outside — which
+        makes a broken board hard to diagnose. Open any game with <code>?debug</code> in the URL (or press
+        <b> Ctrl+Shift+D</b>) to reveal a developer panel with two things you otherwise can't see:
+      </p>
+      <ul className="doc-list">
+        <li><b>Console</b> — uncaught errors, <code>console.error</code>/<code>console.warn</code>, and anything you send with <code>host.debug(...)</code>, forwarded out of the sandbox.</li>
+        <li><b>State</b> — the live redacted state, legal moves, and turn info the reducer produced, so you can see exactly what your UI was handed.</li>
+      </ul>
+      <Code>{`import { connectBordiko } from "@bordiko/sdk/ui";
+const host = connectBordiko();
+
+// This line shows up in the debug panel (errors/warnings appear automatically):
+host.debug("bullet spawned", { x, y, vel });`}</Code>
+
       <Callout kind="tip">
         The sandbox runs the real engine, so it's all you need to build and tune your game. Publishing is
         what puts it in front of other players.

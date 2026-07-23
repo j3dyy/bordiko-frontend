@@ -25,6 +25,7 @@ import { JokeriBoard } from "./JokeriBoard.tsx";
 import { AutoBoard } from "./AutoBoard.tsx";
 import { SchemaBoard } from "./SchemaBoard.tsx";
 import { SandboxBoard } from "./SandboxBoard.tsx";
+import { DebugPanel, type DebugLog } from "./DebugPanel.tsx";
 import { RateBar } from "./RateBar.tsx";
 import { gameMeta } from "./games.ts";
 import type { StateMsg } from "./wire.ts";
@@ -64,6 +65,10 @@ export function Game({
   const { state, connected, errors, chat, emotes, sendMove, sendChat, sendEmote } = useMatch(matchId, playerId);
   const stageRef = useRef<HTMLDivElement>(null);
   const { isFull, toggleFullscreen } = useFullscreen(stageRef);
+  const { debug, setDebug } = useDebug();
+  const [debugLogs, setDebugLogs] = useState<DebugLog[]>([]);
+  const pushLog = (entry: { level: string; message: string }) =>
+    setDebugLogs((ls) => [...ls, { ...entry, ts: Date.now() }].slice(-400));
 
   // Sound each incoming reaction once (ring for the bell, a soft blip otherwise).
   const lastEmoteId = useRef(0);
@@ -157,7 +162,7 @@ export function Game({
             ) : meta.renderer === "jokeri" ? (
               <JokeriBoard state={state} playerId={playerId} onMove={sendMove} />
             ) : meta.renderer === "sandbox" || hasUI ? (
-              <SandboxBoard state={state} playerId={playerId} gameId={gameId} onMove={sendMove} onRequestFullscreen={toggleFullscreen} />
+              <SandboxBoard state={state} playerId={playerId} gameId={gameId} onMove={sendMove} onRequestFullscreen={toggleFullscreen} onLog={pushLog} />
             ) : state.G?.board ? (
               <SchemaBoard state={state} playerId={playerId} gameId={gameId} onMove={sendMove} />
             ) : (
@@ -191,6 +196,15 @@ export function Game({
           onLeave={onLeave}
           onLeaderboard={onLeaderboard}
           onDismiss={() => setDismissed(true)}
+        />
+      )}
+
+      {debug && (
+        <DebugPanel
+          state={state ?? null}
+          logs={debugLogs}
+          onClear={() => setDebugLogs([])}
+          onClose={() => setDebug(false)}
         />
       )}
 
@@ -233,6 +247,47 @@ function useFullscreen(ref: React.RefObject<HTMLElement | null>) {
     else void el.requestFullscreen?.().catch(() => {});
   };
   return { isFull, toggleFullscreen };
+}
+
+// Developer debug mode: on via ?debug in the URL or a saved preference, and
+// toggled anytime with Ctrl+Shift+D. Surfaces the DebugPanel (state inspector +
+// the sandboxed UI's forwarded console/errors).
+function useDebug() {
+  const [debug, setDebugState] = useState(() => {
+    try {
+      if (new URLSearchParams(window.location.search).has("debug")) return true;
+      return localStorage.getItem("bordiko:debug") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const setDebug = (on: boolean) => {
+    setDebugState(on);
+    try {
+      localStorage.setItem("bordiko:debug", on ? "1" : "0");
+    } catch {
+      /* storage unavailable — session-only */
+    }
+  };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && (e.key === "D" || e.key === "d")) {
+        e.preventDefault();
+        setDebugState((d) => {
+          const next = !d;
+          try {
+            localStorage.setItem("bordiko:debug", next ? "1" : "0");
+          } catch {
+            /* ignore */
+          }
+          return next;
+        });
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+  return { debug, setDebug };
 }
 
 // Mute/unmute the game's sound effects (persisted in localStorage).
