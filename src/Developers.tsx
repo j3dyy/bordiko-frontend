@@ -617,11 +617,11 @@ interface MoveContext {
       <h2>endIf &amp; results</h2>
       <p>Runs after every accepted move. Return a result to end the match (or nothing to continue):</p>
       <Code>{`interface GameResult {
-  winner?: string;      // single winner
-  winners?: string[];   // team / co-op winners
-  losers?: string[];
-  draw?: boolean;
-  reason?: string;      // shown in the game-over card
+  winner?: string;                   // single winner
+  winners?: string[];                // team / co-op winners
+  draw?: boolean;                    // ended with no winner
+  scores?: Record<string, number>;   // final scores, when the game is scored
+  reason?: string;                   // shown in the game-over card
 }`}</Code>
 
       <h2>enumerate — legal moves</h2>
@@ -720,9 +720,11 @@ host.onEvent(e => { if (e.type === "hit") spark(e.data); }); // fire-and-forget
 host.chat("gg");                 // send a message to the table
 host.onChat(m => addLine(m.name + ": " + m.text)); // receive messages`}</Code>
       <p>
-        To take over chat, set <code>"ownChat": true</code> in your game's catalog metadata. The platform
-        then <b>hides its default chat sidebar</b> (your board goes full-width) and relays messages into your
-        UI via <code>onChat</code> — draw them however you like.
+        Rendering chat inside your game is <b>own-chat mode</b>: the platform <b>hides its default chat
+        sidebar</b> (your board goes full-width) and relays table messages into your UI via <code>onChat</code>
+        instead. It's currently switched on per game on the platform side for immersive titles like{" "}
+        <code>arena-shooter</code>; by default a custom UI keeps Bordiko's own chat sidebar. The
+        <code> fullscreen</code>, <code>debug</code> and <code>onEvent</code> bridges above work in any custom UI.
       </p>
 
       <h2>Events — trigger effects &amp; sound from the reducer</h2>
@@ -913,8 +915,8 @@ function Publishing() {
         module the first time a match starts — no redeploy, no downtime — and it shows in the catalog.
       </p>
       <Callout kind="note">
-        Publishing is self-service and open: sign in, generate a publish token on your <b>Profile</b>, and submit.
-        (First-party games published with an admin token skip the queue.)
+        Publishing is self-service and open: sign in, generate a publish token on your <b>Profile</b>, and submit —
+        every submission goes through the same review queue before it appears in the catalog.
       </Callout>
     </article>
   );
