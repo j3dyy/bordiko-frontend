@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode, type CSSProperties } from "react";
-import { publishGame, fetchMyGames } from "./api.ts";
+import { publishGame, fetchMyGames, setMyGameEnabled } from "./api.ts";
 import type { ModerationGame } from "./wire.ts";
 
 // The in-app developer docs. A public section (no login) that teaches a
@@ -144,6 +144,18 @@ function Content({ id, onNavigate, signedIn }: { id: string; onNavigate: (page: 
 
 const BOARD_KINDS = ["custom", "grid", "hex", "network", "tableau"] as const;
 
+// One entry per game (the list arrives newest-version-first, so keep the first).
+function dedupeByGame(list: ModerationGame[]): ModerationGame[] {
+  const seen = new Set<string>();
+  const out: ModerationGame[] = [];
+  for (const g of list) {
+    if (seen.has(g.gameId)) continue;
+    seen.add(g.gameId);
+    out.push(g);
+  }
+  return out;
+}
+
 // Chunked base64 for the wasm (arrayBuffer → base64) without blowing the call stack.
 function toBase64(bytes: Uint8Array): string {
   let bin = "";
@@ -198,6 +210,16 @@ function Publish({ signedIn }: { signedIn: boolean }) {
       setMine(await fetchMyGames());
     } catch {
       setMine([]);
+    }
+  }
+
+  async function toggleMine(g: ModerationGame) {
+    const next = !(g.enabled ?? true);
+    setMine((ms) => ms?.map((x) => (x.gameId === g.gameId ? { ...x, enabled: next } : x)) ?? null);
+    try {
+      await setMyGameEnabled(g.gameId, next);
+    } catch {
+      await loadMine(); // roll back to the server's truth
     }
   }
   useEffect(() => {
@@ -328,18 +350,30 @@ function Publish({ signedIn }: { signedIn: boolean }) {
       </div>
 
       <h2 style={{ marginTop: 28 }}>My games</h2>
+      <p className="doc-opt">Manage the games you've published — toggle each on or off in the catalog.</p>
       {mine === null ? (
         <p className="doc-opt">Loading…</p>
       ) : mine.length === 0 ? (
         <p className="doc-opt">You haven't submitted any games yet.</p>
       ) : (
         <ul className="doc-list" style={{ listStyle: "none", padding: 0 }}>
-          {mine.map((g) => (
-            <li key={`${g.gameId}@${g.version}`} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #eee6f5" }}>
+          {dedupeByGame(mine).map((g) => (
+            <li key={g.gameId} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #eee6f5" }}>
               <b>{g.displayName || g.gameId}</b>
               <span className="doc-opt">{g.gameId}@{g.version}</span>
               <PubStatusPill status={g.status} />
               {g.status === "rejected" && g.rejectReason && <span className="doc-opt">— {g.rejectReason}</span>}
+              {g.status === "published" && (
+                <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span className="doc-opt">{(g.enabled ?? true) ? "Live" : "Disabled"}</span>
+                  <button
+                    onClick={() => void toggleMine(g)}
+                    style={{ padding: "4px 12px", borderRadius: 8, border: "1px solid #d8cdf0", background: (g.enabled ?? true) ? "#fff" : "#efe9fb", cursor: "pointer" }}
+                  >
+                    {(g.enabled ?? true) ? "Disable" : "Enable"}
+                  </button>
+                </span>
+              )}
             </li>
           ))}
         </ul>

@@ -211,6 +211,7 @@ export interface ModerationGame {
   minPlayers?: number;
   maxPlayers?: number;
   createdAt?: string;
+  enabled?: boolean; // published games only: whether the developer/admin has it live
 }
 
 /* ----------------------------- leaderboard -------------------------------- */

@@ -88,6 +88,20 @@ export function Admin({ myId }: { myId: string }) {
     }
   }
 
+  async function removeAdminGame(g: AdminGame) {
+    if (!window.confirm(`Delete ${g.id} and all its versions? This can't be undone.`)) return;
+    const key = `d:${g.id}`;
+    mark(key, true);
+    try {
+      await deleteGame(g.id);
+      await load();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      mark(key, false);
+    }
+  }
+
   async function viewSource(g: ModerationGame) {
     try {
       const text = await fetchGameSource(g.gameId, g.version);
@@ -258,6 +272,13 @@ export function Admin({ myId }: { myId: string }) {
                   onClick={() => toggleGame(g)}
                 >
                   {g.enabled ? t("admin.disable") : t("admin.enable")}
+                </button>
+                <button
+                  className="admin-toggle danger"
+                  disabled={busy[`d:${g.id}`]}
+                  onClick={() => void removeAdminGame(g)}
+                >
+                  Delete
                 </button>
               </li>
             ))}

@@ -277,6 +277,16 @@ export async function adminSetGameEnabled(id: string, enabled: boolean): Promise
   if (!res.ok) throw new Error(`setGameEnabled: ${res.status} ${await res.text()}`);
 }
 
+// A developer enables/disables one of THEIR OWN games (ownership checked server-side).
+export async function setMyGameEnabled(gameId: string, enabled: boolean): Promise<void> {
+  const res = await req(`/api/my/games/${encodeURIComponent(gameId)}/enabled`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ enabled }),
+  });
+  if (!res.ok) throw new Error(`setMyGameEnabled: ${res.status} ${await res.text()}`);
+}
+
 export async function adminListUsers(): Promise<AdminUser[]> {
   const data = await json<{ users: AdminUser[] }>(await req("/api/admin/users"), "adminUsers");
   return data.users ?? [];
