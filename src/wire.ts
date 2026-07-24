@@ -192,6 +192,7 @@ export interface CatalogGame {
   plays: number;
   live: number;
   hasUI?: boolean; // ships a custom sandboxed UI bundle → the frontend auto-renders it
+  ownerId?: string; // publishing developer ("" / absent = first-party) → links to their author page
 }
 
 /* ----------------------- publishing / moderation -------------------------- */
@@ -212,6 +213,21 @@ export interface ModerationGame {
   maxPlayers?: number;
   createdAt?: string;
   enabled?: boolean; // published games only: whether the developer/admin has it live
+}
+
+// A developer's public author profile: their name + the games they've published.
+export interface DevGame {
+  id: string;
+  displayName: string;
+  board: string;
+  minPlayers: number;
+  maxPlayers: number;
+  hasUI?: boolean;
+}
+export interface DeveloperProfile {
+  id: string;
+  displayName: string;
+  games: DevGame[];
 }
 
 /* ----------------------------- leaderboard -------------------------------- */

@@ -6,6 +6,7 @@ import { Waiting } from "./Waiting.tsx";
 import { Game } from "./Game.tsx";
 import { GameDetail } from "./GameDetail.tsx";
 import { Profile } from "./Profile.tsx";
+import { DeveloperProfile } from "./DeveloperProfile.tsx";
 import { Leaderboard } from "./Leaderboard.tsx";
 import { Admin } from "./Admin.tsx";
 import { Developers } from "./Developers.tsx";
@@ -23,6 +24,7 @@ type View =
   | { screen: "game"; matchId: string; gameId: string }
   | { screen: "leaderboard"; gameId?: string }
   | { screen: "developers"; page?: string }
+  | { screen: "developer"; id: string }
   | { screen: "admin" };
 
 // The view is mirrored in the URL path (History API) so links are clean and
@@ -38,6 +40,7 @@ function viewToPath(v: View): string {
     case "game": return `/play/${encodeURIComponent(v.matchId)}/${encodeURIComponent(v.gameId)}`;
     case "admin": return "/admin";
     case "developers": return v.page ? `/developers/${encodeURIComponent(v.page)}` : "/developers";
+    case "developer": return `/u/${encodeURIComponent(v.id)}`;
     default: return "/";
   }
 }
@@ -48,6 +51,7 @@ function pathToView(pathname: string): View {
   if (seg[0] === "me") return { screen: "profile" };
   if (seg[0] === "admin") return { screen: "admin" };
   if (seg[0] === "developers") return { screen: "developers", page: seg[1] };
+  if (seg[0] === "u" && seg[1]) return { screen: "developer", id: seg[1] };
   if (seg[0] === "leaderboard") return { screen: "leaderboard", gameId: seg[1] };
   if (seg[0] === "waiting" && seg[1]) return { screen: "waiting", lobbyId: seg[1] };
   if (seg[0] === "play" && seg[1] && seg[2]) return { screen: "game", matchId: seg[1], gameId: seg[2] };
@@ -213,11 +217,20 @@ export function App() {
           onGame={(matchId, gameId) => navigate({ screen: "game", matchId, gameId })}
           onBack={goHome}
           onBlocked={refreshActive}
+          onOpenDeveloper={(id) => navigate({ screen: "developer", id })}
         />
       )}
 
       {view.screen === "profile" && (
         <Profile user={user} onOpenGame={(gameId) => navigate({ screen: "detail", gameId })} onBack={goHome} />
+      )}
+
+      {view.screen === "developer" && (
+        <DeveloperProfile
+          id={view.id}
+          onOpenGame={(gameId) => navigate({ screen: "detail", gameId })}
+          onBack={goHome}
+        />
       )}
 
       {view.screen === "waiting" && (

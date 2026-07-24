@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { fetchCatalog, fetchLeaderboard, setUsername } from "./api.ts";
+import { fetchCatalog, fetchLeaderboard, fetchMyGames, setUsername } from "./api.ts";
 import { useAuth } from "./auth.tsx";
 import { useT } from "./i18n.tsx";
 import { gameMeta } from "./games.ts";
-import type { LeaderRow, User } from "./wire.ts";
+import type { LeaderRow, ModerationGame, User } from "./wire.ts";
+
+// Status pill colours for a developer's own submissions.
+const MG_PILL: Record<string, { bg: string; fg: string }> = {
+  pending: { bg: "#facc1522", fg: "#b8860b" },
+  published: { bg: "#22c55e22", fg: "#15803d" },
+  rejected: { bg: "#ef444422", fg: "#b91c1c" },
+};
 
 interface GameStat extends LeaderRow {
   gameId: string;
@@ -21,6 +28,7 @@ export function Profile({
   onBack: () => void;
 }) {
   const [stats, setStats] = useState<GameStat[]>([]);
+  const [mine, setMine] = useState<ModerationGame[]>([]);
   const [loading, setLoading] = useState(true);
   const { refresh } = useAuth();
   const [editing, setEditing] = useState(false);
@@ -65,6 +73,24 @@ export function Profile({
         if (live) setLoading(false);
       }
     })();
+    return () => {
+      live = false;
+    };
+  }, [user.id]);
+
+  // The user's own game submissions (deduped to the newest version per game).
+  useEffect(() => {
+    let live = true;
+    fetchMyGames()
+      .then((rows) => {
+        const byGame = new Map<string, ModerationGame>();
+        for (const r of rows) {
+          const prev = byGame.get(r.gameId);
+          if (!prev || (r.createdAt ?? "") > (prev.createdAt ?? "")) byGame.set(r.gameId, r);
+        }
+        if (live) setMine([...byGame.values()].sort((a, b) => a.gameId.localeCompare(b.gameId)));
+      })
+      .catch(() => live && setMine([]));
     return () => {
       live = false;
     };
@@ -153,6 +179,44 @@ export function Profile({
             );
           })}
         </div>
+      )}
+
+      {mine.length > 0 && (
+        <>
+          <h3 className="section-title">Games you've published</h3>
+          <div className="profile-games">
+            {mine.map((g) => {
+              const pill = MG_PILL[g.status] ?? MG_PILL.pending;
+              const clickable = g.status === "published";
+              return (
+                <button
+                  className="profile-game"
+                  key={g.gameId}
+                  onClick={() => clickable && onOpenGame(g.gameId)}
+                  disabled={!clickable}
+                  style={{ ["--accent" as string]: gameMeta(g.gameId).accent }}
+                >
+                  <span className="pg-emoji">{gameMeta(g.gameId).emoji}</span>
+                  <div className="pg-info">
+                    <div className="pg-name">{g.displayName || g.gameId}</div>
+                    <div className="pg-record">
+                      {g.gameId}@{g.version}
+                      {g.status === "rejected" && g.rejectReason ? ` · ${g.rejectReason}` : ""}
+                    </div>
+                  </div>
+                  <span
+                    style={{
+                      background: pill.bg, color: pill.fg, padding: "2px 9px", borderRadius: 999,
+                      fontSize: 12, fontWeight: 700, textTransform: "capitalize", alignSelf: "center",
+                    }}
+                  >
+                    {g.status}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );

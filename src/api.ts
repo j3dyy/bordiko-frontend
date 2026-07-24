@@ -1,4 +1,4 @@
-import type { Lobby, LeaderRow, Providers, User, CatalogGame, AdminGame, AdminUser, ModerationGame } from "./wire.ts";
+import type { Lobby, LeaderRow, Providers, User, CatalogGame, AdminGame, AdminUser, ModerationGame, DeveloperProfile } from "./wire.ts";
 
 // Gateway base URL (auth + REST proxy + WebSocket all live here). Override at
 // build/dev time with VITE_GATEWAY_URL.
@@ -331,6 +331,11 @@ export async function publishGame(pkg: PublishPackage): Promise<ModerationGame> 
 // The signed-in developer's own submissions + status.
 export async function fetchMyGames(): Promise<ModerationGame[]> {
   return json<ModerationGame[]>(await req("/api/my/games"), "myGames");
+}
+
+// A developer's PUBLIC author profile (name + their published games).
+export async function fetchDeveloper(id: string): Promise<DeveloperProfile> {
+  return json<DeveloperProfile>(await req(`/api/developers/${encodeURIComponent(id)}`), "developer");
 }
 
 /* -------- admin moderation -------- */

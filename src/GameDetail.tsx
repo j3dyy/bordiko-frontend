@@ -15,6 +15,7 @@ export function GameDetail({
   onGame,
   onBack,
   onBlocked,
+  onOpenDeveloper,
 }: {
   gameId: string;
   myId: string;
@@ -22,6 +23,7 @@ export function GameDetail({
   onGame: (matchId: string, gameId: string) => void;
   onBack: () => void;
   onBlocked?: () => void;
+  onOpenDeveloper?: (id: string) => void;
 }) {
   const { t } = useT();
   const m = gameMeta(gameId);
@@ -83,7 +85,18 @@ export function GameDetail({
             {m.verified && <span className="verified" title="Verified creator">✓</span>}
           </h1>
           <div className="detail-creator">
-            {t("detail.by")} <b>{m.author}</b>
+            {t("detail.by")}{" "}
+            {game?.ownerId && onOpenDeveloper ? (
+              <button
+                onClick={() => onOpenDeveloper(game.ownerId!)}
+                style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "inherit", font: "inherit", textDecoration: "underline" }}
+                title="View developer's games"
+              >
+                <b>{m.author}</b>
+              </button>
+            ) : (
+              <b>{m.author}</b>
+            )}
             {m.verified && <span className="verified-tag">{t("detail.verified")}</span>}
           </div>
           <p className="detail-blurb">{t(`gm.${gameId}.blurb`, undefined, m.blurb)}</p>
