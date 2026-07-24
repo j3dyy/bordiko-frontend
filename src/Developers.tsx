@@ -909,12 +909,12 @@ function Publishing() {
 
       <h2>Going live</h2>
       <p>
-        Once published, the game host fetches your module the first time a match starts — no redeploy,
-        no downtime. It appears in the catalog immediately (subject to moderation, if enabled).
+        Your submission enters the <b>review queue</b>; once an admin approves it, the game host fetches your
+        module the first time a match starts — no redeploy, no downtime — and it shows in the catalog.
       </p>
       <Callout kind="note">
-        Publishing to the hosted marketplace needs an admin token today while the platform is in early
-        access. If you want to publish a game, get in touch and we'll set you up.
+        Publishing is self-service and open: sign in, generate a publish token on your <b>Profile</b>, and submit.
+        (First-party games published with an admin token skip the queue.)
       </Callout>
     </article>
   );
