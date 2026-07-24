@@ -885,6 +885,18 @@ function Publishing() {
       <p>A <b>real-time</b> game adds a <code>realtime</code> block so the host drives its clock (see <b>Real-time games</b>):</p>
       <Code>{`"realtime": { "tick": true, "tickRate": 15 }   // ticks per second, max 30`}</Code>
 
+      <p>
+        A <b>turn-based</b> game can add an optional <code>timers</code> block for a turn clock. Because a reducer
+        is time-blind, the <b>gateway</b> enforces the clock — on expiry it either auto-plays a safe move or ends
+        the match. Declare <i>either</i> a per-turn limit <i>or</i> a chess clock:
+      </p>
+      <Code>{`"timers": { "perTurnSeconds": 45, "onExpire": "autoMove" }  // resets each turn; autoMove | forfeit
+"timers": { "totalSeconds": 300 }                          // chess clock: 5 min per player, flag-fall = loss`}</Code>
+      <p>
+        Omit it to inherit the platform default (a per-turn limit that auto-plays the first legal move).{" "}
+        <code>perTurnSeconds: 0</code> disables the turn timer entirely.
+      </p>
+
       <h2>Two ways to publish</h2>
       <p>
         <b>From the web</b> (simplest): sign in and use <b>Developers → Publish a game</b> to upload your{" "}

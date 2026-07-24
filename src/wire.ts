@@ -36,6 +36,9 @@ export interface StateMsg {
   // Unix-ms deadline for the current turn; the gateway auto-plays a safe move if
   // the acting player doesn't move in time. Absent when there's no timer.
   turnDeadline?: number;
+  // Chess-clocked games only: each seat's remaining budget in ms at send time. The
+  // seat on the clock counts down; running out forfeits on time. Absent otherwise.
+  clocks?: Record<string, number>;
   // player id → display name, so the board can label seats by name (not raw id).
   names?: Record<string, string>;
 }

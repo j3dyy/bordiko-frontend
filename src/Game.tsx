@@ -138,7 +138,11 @@ export function Game({
             {state.yourTurn ? t("game.yourTurn") : t("game.waiting")}
           </span>
         )}
-        {state && !state.ended && <TurnTimer deadline={state.turnDeadline} yourTurn={state.yourTurn} />}
+        {state && !state.ended && (
+          state.clocks
+            ? <ChessClocks clocks={state.clocks} currentPlayer={state.currentPlayer} names={state.names} myId={playerId} />
+            : <TurnTimer deadline={state.turnDeadline} yourTurn={state.yourTurn} />
+        )}
         {state?.ended && <span className="result">{resultText(state, playerId, t)}</span>}
         <span className="statusbar-actions">
           <SoundToggle />
@@ -341,6 +345,61 @@ function TurnTimer({ deadline, yourTurn }: { deadline?: number; yourTurn: boolea
   return (
     <span className={`turn-timer${urgent ? " urgent" : ""}${yourTurn ? " you" : ""}`} title={t("timer.title")}>
       ⏱ {mm}:{ss}
+    </span>
+  );
+}
+
+// Per-player chess clocks for a clocked game: each seat's remaining budget, with
+// the seat on the clock ticking down. The server sends a fresh snapshot on every
+// state update; between updates we count the active seat down locally, anchored to
+// when the snapshot arrived. Flag-fall (a clock hitting zero) forfeits server-side.
+function ChessClocks({
+  clocks,
+  currentPlayer,
+  names,
+  myId,
+}: {
+  clocks: Record<string, number>;
+  currentPlayer: string;
+  names?: Record<string, string>;
+  myId: string;
+}) {
+  const { t } = useT();
+  // Anchor the snapshot to its arrival time so the active seat ticks smoothly.
+  const key = JSON.stringify(clocks);
+  const anchor = useRef<{ base: Record<string, number>; at: number }>({ base: clocks, at: Date.now() });
+  useEffect(() => {
+    anchor.current = { base: clocks, at: Date.now() };
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [, setNow] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setNow((n) => n + 1), 250);
+    return () => clearInterval(id);
+  }, []);
+
+  const seats = Object.keys(clocks);
+  const label = (id: string) => (id === myId ? t("clock.you") : names?.[id] || t("clock.opponent"));
+  const fmt = (ms: number) => {
+    const s = Math.max(0, Math.ceil(ms / 1000));
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  };
+  return (
+    <span className="chess-clocks" title={t("clock.title")}>
+      {seats.map((id) => {
+        const live = id === currentPlayer
+          ? anchor.current.base[id] - (Date.now() - anchor.current.at)
+          : anchor.current.base[id];
+        const urgent = live <= 30000;
+        return (
+          <span
+            key={id}
+            className={`chess-clock${id === currentPlayer ? " active" : ""}${urgent ? " urgent" : ""}`}
+          >
+            <span className="chess-clock-who">{label(id)}</span>
+            <span className="chess-clock-time">⏱ {fmt(live)}</span>
+          </span>
+        );
+      })}
     </span>
   );
 }
