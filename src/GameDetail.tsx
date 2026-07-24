@@ -92,10 +92,10 @@ export function GameDetail({
                 style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "inherit", font: "inherit", textDecoration: "underline" }}
                 title="View developer's games"
               >
-                <b>{m.author}</b>
+                <b>{game?.ownerName ? `@${game.ownerName}` : m.author}</b>
               </button>
             ) : (
-              <b>{m.author}</b>
+              <b>{game?.ownerName ? `@${game.ownerName}` : m.author}</b>
             )}
             {m.verified && <span className="verified-tag">{t("detail.verified")}</span>}
           </div>

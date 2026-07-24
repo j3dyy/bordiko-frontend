@@ -193,6 +193,7 @@ export interface CatalogGame {
   live: number;
   hasUI?: boolean; // ships a custom sandboxed UI bundle → the frontend auto-renders it
   ownerId?: string; // publishing developer ("" / absent = first-party) → links to their author page
+  ownerName?: string; // that developer's display name, shown as the author (e.g. "jedy")
 }
 
 /* ----------------------- publishing / moderation -------------------------- */
