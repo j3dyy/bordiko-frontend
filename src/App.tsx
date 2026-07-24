@@ -231,6 +231,7 @@ export function App() {
 
       {view.screen === "game" && (
         <Game
+          key={view.matchId}
           matchId={view.matchId}
           playerId={user.id}
           gameId={view.gameId}

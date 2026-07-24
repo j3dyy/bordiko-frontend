@@ -47,6 +47,17 @@ export function useMatch(matchId: string, playerId: string): MatchConnection {
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
+    // Switching matches (e.g. a rematch reuses this component): wipe the previous
+    // match's state so its ended/game-over/chat never bleeds into the new one.
+    setState(null);
+    setConnected(false);
+    setChat([]);
+    setEmotes([]);
+    setEvents(null);
+    setErrors([]);
+    setRematchOffers([]);
+    setRematchReady(null);
+
     const ws = new WebSocket(wsURL(matchId));
     wsRef.current = ws;
     ws.onopen = () => setConnected(true);
