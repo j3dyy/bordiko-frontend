@@ -882,10 +882,20 @@ function Publishing() {
       <p>A <b>real-time</b> game adds a <code>realtime</code> block so the host drives its clock (see <b>Real-time games</b>):</p>
       <Code>{`"realtime": { "tick": true, "tickRate": 15 }   // ticks per second, max 30`}</Code>
 
-      <h2>The command</h2>
-      <p>From your game project, after <code>npm run build</code>:</p>
-      <Code>{`REGISTRY=https://api.bordiko.com/api ADMIN_TOKEN=<token> npm run publish:game`}</Code>
-      <p>It sends the manifest, the base64 <code>.wasm</code>, any <code>assets/*</code> images, and an optional <code>ui.html</code>.</p>
+      <h2>Two ways to publish</h2>
+      <p>
+        <b>From the web</b> (simplest): sign in and use <b>Developers → Publish a game</b> to upload your{" "}
+        <code>.wasm</code>, optional <code>ui.html</code>, and source. <b>From the CLI</b>, after{" "}
+        <code>npm run build</code>, authenticate as yourself with the <code>bordiko_session</code> cookie
+        (copy it from your browser dev-tools after signing in):
+      </p>
+      <Code>{`BORDIKO_SESSION=<cookie> REGISTRY=https://api.bordiko.com/api npm run publish:game`}</Code>
+      <p>
+        Either way, your submission is <b>tagged to your account</b> and <b>enters the review queue</b> — an admin
+        reviews the code and approves it before it goes live. It sends the manifest, the base64 <code>.wasm</code>,
+        your <b>source bundle</b> (required), any <code>assets/*</code> images, and an optional <code>ui.html</code>.
+        Manage your submissions and toggle your live games under <b>My games</b> on the Publish page.
+      </p>
 
       <h2>What the registry checks</h2>
       <p>Three gates run before anything is stored — this is what keeps an open marketplace safe:</p>
