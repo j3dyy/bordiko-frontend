@@ -551,6 +551,7 @@ function GameApi() {
   playerView?: (G: S, playerId: string, flow: FlowState) => Json;
   endIf?:      (G: S, flow: FlowState) => GameResult | void;
   enumerate?:  (G: S, playerId: string, flow: FlowState) => MoveDescriptor[];
+  bot?:        (G: S, playerId: string, flow: FlowState, random: RandomAPI) => MoveDescriptor | undefined;
   initialActive?: (G: S) => string[] | undefined;   // simultaneous opening
 
   tick?: (G: S, dt: number, ctx: TickContext) => void;  // real-time — see "Real-time games"
@@ -630,6 +631,32 @@ interface MoveContext {
       <Callout kind="tip">
         Even if you ship a custom UI, implementing <code>enumerate</code> is worth it: it gives you free
         bots to fill empty seats and to fuzz-test your rules to completion.
+      </Callout>
+
+      <h2>bot — your own AI <span className="doc-opt">(optional)</span></h2>
+      <p>
+        Ship a <code>bot</code> and your game plays vs the computer — it fills empty seats and stands in for
+        absent players. Return the move this seat should play, or nothing to let the platform fall back to a
+        random legal move. If you skip <code>bot</code> entirely but have <code>enumerate</code>, seats are
+        still filled with random-legal play.
+      </p>
+      <Code>{`bot?: (G, playerId, flow, random) => MoveDescriptor | undefined
+
+// tic-tac-toe: win, else block, else centre, else a corner
+bot: (G, playerId, flow, random) => {
+  const me = flow.playOrder.indexOf(playerId);
+  const cell = winningCell(G, me)         // take the win
+    ?? winningCell(G, 1 - me)             // else block theirs
+    ?? (G.board[4] === null ? 4 : undefined)  // else centre
+    ?? random.pick(openCorners(G));       // else a corner
+  return { type: "place", payload: { cell } };
+}`}</Code>
+      <Callout kind="note">
+        Two guarantees keep it safe: <b><code>random</code> is a private stream</b> separate from the match
+        RNG — your bot's dice never disturb the game's own randomness, and its choices aren't replayed — and
+        the returned move is <b>validated against <code>enumerate</code></b> before it's applied, so a buggy
+        bot degrades to a random legal move rather than making an illegal play. The bot runs in the same
+        sandbox as your reducer and sees the full state <code>G</code>.
       </Callout>
     </article>
   );
