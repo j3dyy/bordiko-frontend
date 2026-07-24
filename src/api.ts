@@ -328,6 +328,13 @@ export async function publishGame(pkg: PublishPackage): Promise<ModerationGame> 
   return (await res.json()) as ModerationGame;
 }
 
+// The signed-in user's own session token, so they can copy it from their profile
+// and publish from the CLI (BORDIKO_SESSION) without digging the cookie out of
+// dev-tools. Only ever returns the caller's own token.
+export async function fetchPublishToken(): Promise<{ token: string; userId: string; name: string }> {
+  return json<{ token: string; userId: string; name: string }>(await req("/api/my/token"), "publishToken");
+}
+
 // The signed-in developer's own submissions + status.
 export async function fetchMyGames(): Promise<ModerationGame[]> {
   return json<ModerationGame[]>(await req("/api/my/games"), "myGames");

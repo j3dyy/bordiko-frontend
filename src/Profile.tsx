@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { fetchCatalog, fetchLeaderboard, fetchMyGames, setUsername } from "./api.ts";
+import { fetchCatalog, fetchLeaderboard, fetchMyGames, fetchPublishToken, setUsername } from "./api.ts";
 import { useAuth } from "./auth.tsx";
 import { useT } from "./i18n.tsx";
 import { gameMeta } from "./games.ts";
@@ -35,6 +35,18 @@ export function Profile({
   const [nameInput, setNameInput] = useState(user.displayName);
   const [savingName, setSavingName] = useState(false);
   const [nameErr, setNameErr] = useState("");
+  const [token, setToken] = useState<string | null>(null);
+  const [tokenErr, setTokenErr] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  async function revealToken() {
+    setTokenErr("");
+    try {
+      setToken((await fetchPublishToken()).token);
+    } catch (e) {
+      setTokenErr(e instanceof Error ? e.message : String(e));
+    }
+  }
   const { t } = useT();
 
   async function saveName() {
@@ -218,6 +230,40 @@ export function Profile({
           </div>
         </>
       )}
+
+      <h3 className="section-title">Publish from the CLI</h3>
+      <div className="cli-token">
+        <p className="hint">
+          Your developer token — paste it into the CLI as <code>BORDIKO_SESSION</code> to publish games you own
+          (they enter the review queue). Treat it like a password: anyone with it can act as you.
+        </p>
+        {!token ? (
+          <button className="ghost" onClick={() => void revealToken()}>Show my publish token</button>
+        ) : (
+          <div style={{ display: "flex", gap: 8, alignItems: "flex-start", flexWrap: "wrap" }}>
+            <code
+              style={{
+                flex: "1 1 320px", whiteSpace: "pre-wrap", wordBreak: "break-all",
+                background: "rgba(0,0,0,0.06)", padding: "10px 12px", borderRadius: 8,
+                fontSize: 12, fontFamily: "ui-monospace, monospace",
+              }}
+            >
+              BORDIKO_SESSION={token} npx @bordiko/cli publish
+            </code>
+            <button
+              className="ghost small"
+              onClick={() => {
+                void navigator.clipboard.writeText(`BORDIKO_SESSION=${token} npx @bordiko/cli publish`);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+              }}
+            >
+              {copied ? "Copied ✓" : "Copy"}
+            </button>
+          </div>
+        )}
+        {tokenErr && <p className="error">{tokenErr}</p>}
+      </div>
     </div>
   );
 }
