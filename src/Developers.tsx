@@ -411,6 +411,7 @@ function Overview({ onNavigate }: { onNavigate: (page: string) => void }) {
         <li><b>playerView</b> <span className="doc-opt">(optional)</span> — hide secret information (hands, roles) per player.</li>
         <li><b>endIf</b> <span className="doc-opt">(optional)</span> — decide when someone has won.</li>
         <li><b>enumerate</b> <span className="doc-opt">(optional)</span> — list the legal moves; this powers bots and a zero-effort default UI.</li>
+        <li><b>bot</b> <span className="doc-opt">(optional)</span> — your own AI, so the game plays vs the computer and fills empty seats.</li>
       </ul>
       <p>
         That is a <b>turn-based</b> game. To build a <b>real-time action</b> game — where the world keeps
@@ -976,7 +977,7 @@ function Sandbox() {
       <p>It drives the same reducer the WASM host runs, so what you see is what players get. You can:</p>
       <ul className="doc-list">
         <li><b>Play every seat</b> — click a seat to sit in it; each seat sees only its own redacted view, so you can test hidden information from every angle.</li>
-        <li><b>Fill seats with bots</b> — flip any seat to a bot, then <i>Step</i> one move or <i>auto-play</i>. Bots use your <code>enumerate</code>; set every seat to a bot to watch a whole game.</li>
+        <li><b>Fill seats with bots</b> — flip any seat to a bot, then <i>Step</i> one move or <i>auto-play</i>. They play your <code>bot</code> when you ship one (otherwise a random legal move from <code>enumerate</code>) — the same chooser the live platform uses, so you preview the real opponent. Set every seat to a bot to watch a whole game.</li>
         <li><b>Hot-reload on save</b> — edit your game and the match restarts with the new rules instantly.</li>
         <li><b>Preview your custom UI</b> — a <code>ui.html</code> loads in the same locked-down sandbox iframe players get, over the real message bridge.</li>
         <li><b>Inspect everything</b> — a live panel shows the phase and turn, the current seat's redacted state, its legal moves, and the move log.</li>
@@ -997,6 +998,11 @@ function Sandbox() {
         completion. Play a random game, then <code>replay</code> the move log and assert the final state
         is byte-identical — the determinism check that guarantees your game behaves the same in the WASM
         sandbox as in Node.
+      </p>
+      <p>
+        To exercise <b>your own <code>bot</code></b>, call <code>chooseBotMove(game, state, seat)</code> — it
+        returns your bot's pick (or a random legal move if you ship none), so you can unit-test that it wins
+        the positions it should. It uses an isolated RNG, so it never disturbs the match state.
       </p>
       <Code>{`import { createMatch, applyMove, randomBotMove, replay, movesFromLog, Rng, seedFromString } from "@bordiko/sdk";
 import game from "./src/game.ts";
