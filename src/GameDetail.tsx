@@ -176,6 +176,7 @@ export function GameDetail({
         <TableSetup
           gameId={gameId}
           options={game?.options}
+          realtime={game?.realtime}
           busy={busy}
           err={err}
           onSubmit={(seats, mode, _vis, _pw, options) => create(seats, mode, options)}

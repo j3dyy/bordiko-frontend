@@ -182,6 +182,7 @@ export function Home({
         <TableSetup
           gameId={setupFor}
           options={catalog.find((c) => c.id === setupFor)?.options}
+          realtime={catalog.find((c) => c.id === setupFor)?.realtime}
           busy={busy === setupFor}
           err={err}
           onSubmit={(seats, mode, visibility, password, options) => create(setupFor, seats, mode, visibility, password, options)}

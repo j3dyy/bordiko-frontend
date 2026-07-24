@@ -13,6 +13,7 @@ export const TEAM_COLORS = ["#6C4CF1", "#FF6A3D"];
 export function TableSetup({
   gameId,
   options: catalogOptions,
+  realtime,
   busy,
   err,
   onSubmit,
@@ -20,6 +21,7 @@ export function TableSetup({
 }: {
   gameId: string;
   options?: GameOption[];
+  realtime?: boolean;
   busy: boolean;
   err: string;
   onSubmit: (seats: number, mode: "solo" | "teams", visibility: "public" | "private", password: string, options: Record<string, unknown>) => void;
@@ -33,6 +35,9 @@ export function TableSetup({
   const [mode, setMode] = useState<"solo" | "teams">("solo");
   const [visibility, setVisibility] = useState<"public" | "private">("public");
   const [password, setPassword] = useState("");
+  // Platform "Turn clock" — off by default; the host opts a table into timing.
+  // Encoded as parseTurnClock reads it on the gateway: "off" | "move:<s>" | "chess:<s>".
+  const [turnClock, setTurnClock] = useState("off");
   // Chosen option values, keyed by option id, initialised to each option's default.
   const [optVals, setOptVals] = useState<Record<string, string | number | boolean>>(
     () => Object.fromEntries(options.map((o) => [o.id, o.default])),
@@ -51,6 +56,14 @@ export function TableSetup({
   }, [teamsEligible, mode]);
 
   const { t } = useT();
+
+  // Turn-clock choices (hidden for real-time games, which are driven by a tick clock).
+  const clockChoices = [
+    { value: "off", label: t("ts.clockOff"), sub: t("ts.clockOffSub") },
+    { value: "move:30", label: "30s", sub: t("ts.clockMoveSub") },
+    { value: "chess:300", label: "5 min", sub: t("ts.clockChessSub") },
+    { value: "chess:600", label: "10 min", sub: t("ts.clockChessSub") },
+  ];
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -141,6 +154,25 @@ export function TableSetup({
           </div>
         ))}
 
+        {/* Platform turn clock — turn-based games only (real-time games are tick-driven). */}
+        {!realtime && (
+          <div className="ts-field">
+            <span className="ts-label">{t("ts.turnClock")}</span>
+            <div className="seg">
+              {clockChoices.map((c) => (
+                <button
+                  key={c.value}
+                  className={turnClock === c.value ? "seg-btn active" : "seg-btn"}
+                  onClick={() => setTurnClock(c.value)}
+                  title={c.sub}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="ts-field">
           <span className="ts-label">{t("ts.visibility")}</span>
           <div className="ts-formats">
@@ -176,7 +208,7 @@ export function TableSetup({
           </button>
           <button
             disabled={busy}
-            onClick={() => onSubmit(seats, teamsEligible ? mode : "solo", visibility, visibility === "private" ? password.trim() : "", optVals)}
+            onClick={() => onSubmit(seats, teamsEligible ? mode : "solo", visibility, visibility === "private" ? password.trim() : "", realtime ? optVals : { ...optVals, turnClock })}
           >
             {busy ? t("ts.creating") : t("ts.createTable")}
           </button>

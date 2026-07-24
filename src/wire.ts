@@ -206,6 +206,7 @@ export interface CatalogGame {
   plays: number;
   live: number;
   hasUI?: boolean; // ships a custom sandboxed UI bundle → the frontend auto-renders it
+  realtime?: boolean; // driven by a tick clock (no turns) → the New-table chooser hides the turn clock
   ownerId?: string; // publishing developer ("" / absent = first-party) → links to their author page
   ownerName?: string; // that developer's display name, shown as the author (e.g. "jedy")
   options?: GameOption[]; // game-declared table options the lobby renders as controls
