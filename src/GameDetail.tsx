@@ -48,15 +48,15 @@ export function GameDetail({
 
   function play() {
     setErr("");
-    if (needsTableSetup(m)) setSetup(true);
+    if (needsTableSetup(m) || (game?.options?.length ?? 0) > 0) setSetup(true);
     else void create(m.minPlayers, "solo");
   }
 
-  async function create(seats: number, mode: "solo" | "teams", khisht = "", format = "") {
+  async function create(seats: number, mode: "solo" | "teams", options: Record<string, unknown> = {}) {
     setBusy(true);
     setErr("");
     try {
-      const lobby = await createLobby(gameId, seats, mode, "public", "", khisht, format);
+      const lobby = await createLobby(gameId, seats, mode, "public", "", options);
       setSetup(false);
       onWaiting(lobby);
     } catch (e) {
@@ -175,9 +175,10 @@ export function GameDetail({
       {setup && (
         <TableSetup
           gameId={gameId}
+          options={game?.options}
           busy={busy}
           err={err}
-          onSubmit={(seats, mode, _vis, _pw, khisht, format) => create(seats, mode, khisht, format)}
+          onSubmit={(seats, mode, _vis, _pw, options) => create(seats, mode, options)}
           onClose={() => setSetup(false)}
         />
       )}

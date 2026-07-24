@@ -178,6 +178,17 @@ export function lobbyFull(l: Lobby): boolean {
 
 /* -------------------------------- catalog --------------------------------- */
 
+// A configurable table option a game declares in its manifest. The New-table
+// chooser renders these as controls; the chosen value reaches the game's setup as
+// config[id] (so `id` = the config key the reducer reads, e.g. "bestOf").
+export interface GameOption {
+  id: string;
+  label: string;
+  type: "choice" | "toggle";
+  choices?: { value: string | number; label: string; sub?: string }[];
+  default: string | number | boolean;
+}
+
 // One marketplace game with real, server-computed stats (see the gateway's
 // /api/catalog). Presentation (name, blurb, emoji, category, creator) is merged
 // in on the client from games.ts.
@@ -194,6 +205,7 @@ export interface CatalogGame {
   hasUI?: boolean; // ships a custom sandboxed UI bundle → the frontend auto-renders it
   ownerId?: string; // publishing developer ("" / absent = first-party) → links to their author page
   ownerName?: string; // that developer's display name, shown as the author (e.g. "jedy")
+  options?: GameOption[]; // game-declared table options the lobby renders as controls
 }
 
 /* ----------------------- publishing / moderation -------------------------- */

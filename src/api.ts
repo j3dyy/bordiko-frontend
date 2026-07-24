@@ -132,14 +132,13 @@ export async function createLobby(
   mode: "solo" | "teams" = "solo",
   visibility: "public" | "private" = "public",
   password = "",
-  khisht = "",
-  format = "",
+  options: Record<string, unknown> = {},
 ): Promise<Lobby> {
   return lobbyResult(
     await req("/api/lobby", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ gameId, seats, mode, visibility, password, khisht, format }),
+      body: JSON.stringify({ gameId, seats, mode, visibility, password, options }),
     }),
     "createLobby",
   );

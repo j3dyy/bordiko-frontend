@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
-import { gameMeta, playersLabel } from "./games.ts";
+import { useEffect, useMemo, useState } from "react";
+import { gameMeta, gameOptions, playersLabel } from "./games.ts";
 import { useT } from "./i18n.tsx";
+import type { GameOption } from "./wire.ts";
 
 // Colors for the two partnerships (also used by the Waiting table room).
 export const TEAM_COLORS = ["#6C4CF1", "#FF6A3D"];
@@ -11,33 +12,34 @@ export const TEAM_COLORS = ["#6C4CF1", "#FF6A3D"];
 // choose your side.
 export function TableSetup({
   gameId,
+  options: catalogOptions,
   busy,
   err,
   onSubmit,
   onClose,
 }: {
   gameId: string;
+  options?: GameOption[];
   busy: boolean;
   err: string;
-  onSubmit: (seats: number, mode: "solo" | "teams", visibility: "public" | "private", password: string, khisht: string, format: string) => void;
+  onSubmit: (seats: number, mode: "solo" | "teams", visibility: "public" | "private", password: string, options: Record<string, unknown>) => void;
   onClose: () => void;
 }) {
   const m = gameMeta(gameId);
+  // The game's declared table options (from its manifest, via the catalog), with a
+  // built-in fallback for first-party games not yet re-published.
+  const options = useMemo(() => gameOptions(gameId, catalogOptions), [gameId, catalogOptions]);
   const [seats, setSeats] = useState(m.minPlayers);
   const [mode, setMode] = useState<"solo" | "teams">("solo");
   const [visibility, setVisibility] = useState<"public" | "private">("public");
   const [password, setPassword] = useState("");
-  // Jokeri only: the khisht penalty (failed positive bid). "spec" = −100 × the
-  // deal size (the classic paper rule); otherwise a flat number.
-  const [khisht, setKhisht] = useState("spec");
-  // Jokeri only: the deal schedule. "standard" = the full 24-deal classic;
-  // "nines" = direct-nines (eight 9-card deals, a faster game).
-  const [jokeriFormat, setJokeriFormat] = useState("standard");
-  const isJokeri = gameId === "jokeri";
-  // Backgammon only: match length. "" = a single game; "bo3"/"bo5" = best-of-N
-  // (first to a majority of game-wins). Carried over the shared `format` field.
-  const [bgFormat, setBgFormat] = useState("");
-  const isBackgammon = gameId === "backgammon";
+  // Chosen option values, keyed by option id, initialised to each option's default.
+  const [optVals, setOptVals] = useState<Record<string, string | number | boolean>>(
+    () => Object.fromEntries(options.map((o) => [o.id, o.default])),
+  );
+  useEffect(() => {
+    setOptVals(Object.fromEntries(options.map((o) => [o.id, o.default])));
+  }, [options]);
 
   const counts: number[] = [];
   for (let n = m.minPlayers; n <= m.maxPlayers; n++) counts.push(n);
@@ -103,75 +105,41 @@ export function TableSetup({
 
         {mode === "teams" && teamsEligible && <TeamPreview seats={seats} />}
 
-        {isJokeri && (
-          <div className="ts-field">
-            <span className="ts-label">{t("ts.dealSchedule")}</span>
-            <div className="ts-formats">
-              <button
-                className={jokeriFormat === "standard" ? "fmt active" : "fmt"}
-                onClick={() => setJokeriFormat("standard")}
-              >
-                <span className="fmt-title">{t("ts.standard")}</span>
-                <span className="fmt-sub">{t("ts.standardSub")}</span>
-              </button>
-              <button
-                className={jokeriFormat === "nines" ? "fmt active" : "fmt"}
-                onClick={() => setJokeriFormat("nines")}
-              >
-                <span className="fmt-title">{t("ts.nines")}</span>
-                <span className="fmt-sub">{t("ts.ninesSub")}</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {isJokeri && (
-          <div className="ts-field">
-            <span className="ts-label">{t("ts.khisht")} <span className="ts-optional">{t("ts.failedBid")}</span></span>
+        {/* Game-declared table options (match length, khisht, …) rendered generically. */}
+        {options.map((o) => (
+          <div className="ts-field" key={o.id}>
+            <span className="ts-label">{o.label}</span>
             <div className="seg">
-              {(
-                [
-                  { v: "spec", label: t("ts.khishtSpec"), sub: t("ts.khishtClassic") },
-                  { v: "-200", label: "−200", sub: t("ts.khishtFlat") },
-                  { v: "-500", label: "−500", sub: t("ts.khishtHarsh") },
-                ]
-              ).map((o) => (
-                <button
-                  key={o.v}
-                  className={o.v === khisht ? "seg-btn active" : "seg-btn"}
-                  onClick={() => setKhisht(o.v)}
-                  title={o.sub}
-                >
-                  {o.label}
-                </button>
-              ))}
+              {o.type === "toggle" ? (
+                <>
+                  <button
+                    className={optVals[o.id] ? "seg-btn" : "seg-btn active"}
+                    onClick={() => setOptVals((v) => ({ ...v, [o.id]: false }))}
+                  >
+                    Off
+                  </button>
+                  <button
+                    className={optVals[o.id] ? "seg-btn active" : "seg-btn"}
+                    onClick={() => setOptVals((v) => ({ ...v, [o.id]: true }))}
+                  >
+                    On
+                  </button>
+                </>
+              ) : (
+                (o.choices ?? []).map((c) => (
+                  <button
+                    key={String(c.value)}
+                    className={optVals[o.id] === c.value ? "seg-btn active" : "seg-btn"}
+                    onClick={() => setOptVals((v) => ({ ...v, [o.id]: c.value }))}
+                    title={c.sub}
+                  >
+                    {c.label}
+                  </button>
+                ))
+              )}
             </div>
           </div>
-        )}
-
-        {isBackgammon && (
-          <div className="ts-field">
-            <span className="ts-label">Match length</span>
-            <div className="seg">
-              {(
-                [
-                  { v: "", label: "Single", sub: "One game decides it" },
-                  { v: "bo3", label: "Best of 3", sub: "First to 2 games" },
-                  { v: "bo5", label: "Best of 5", sub: "First to 3 games" },
-                ]
-              ).map((o) => (
-                <button
-                  key={o.v || "single"}
-                  className={o.v === bgFormat ? "seg-btn active" : "seg-btn"}
-                  onClick={() => setBgFormat(o.v)}
-                  title={o.sub}
-                >
-                  {o.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        ))}
 
         <div className="ts-field">
           <span className="ts-label">{t("ts.visibility")}</span>
@@ -208,7 +176,7 @@ export function TableSetup({
           </button>
           <button
             disabled={busy}
-            onClick={() => onSubmit(seats, teamsEligible ? mode : "solo", visibility, visibility === "private" ? password.trim() : "", isJokeri ? khisht : "", isBackgammon ? bgFormat : isJokeri ? jokeriFormat : "")}
+            onClick={() => onSubmit(seats, teamsEligible ? mode : "solo", visibility, visibility === "private" ? password.trim() : "", optVals)}
           >
             {busy ? t("ts.creating") : t("ts.createTable")}
           </button>

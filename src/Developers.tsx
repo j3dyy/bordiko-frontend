@@ -516,10 +516,11 @@ export default defineGame<State>({
       <Code>{`npm run build   # → dist/my-game.wasm`}</Code>
 
       <h2>6. Publish</h2>
-      <Code>{`REGISTRY=https://api.bordiko.com/api ADMIN_TOKEN=<token> npm run publish:game`}</Code>
+      <p>Generate a publish token on your <b>Profile → Publish from the CLI</b>, then:</p>
+      <Code>{`REGISTRY=https://api.bordiko.com/api BORDIKO_TOKEN=<token> npx @bordiko/cli publish`}</Code>
       <p>
-        The registry validates your module and stores it; the game host fetches it on demand the first
-        time someone starts a match — no redeploy. Full details in <b>Publishing</b>.
+        The registry validates your module and stores it; it enters the review queue and, once an admin
+        approves it, the game host fetches it on demand — no redeploy. Full details in <b>Publishing</b>.
       </p>
     </article>
   );
@@ -885,11 +886,11 @@ function Publishing() {
       <h2>Two ways to publish</h2>
       <p>
         <b>From the web</b> (simplest): sign in and use <b>Developers → Publish a game</b> to upload your{" "}
-        <code>.wasm</code>, optional <code>ui.html</code>, and source. <b>From the CLI</b>, after{" "}
-        <code>npm run build</code>, authenticate as yourself with the <code>bordiko_session</code> cookie
-        (copy it from your browser dev-tools after signing in):
+        <code>.wasm</code>, optional <code>ui.html</code>, and source. <b>From the CLI</b>, generate a
+        <b> publish token</b> on your <b>Profile → Publish from the CLI</b> (a revocable, 1-year credential — not
+        your login), then after <code>npm run build</code>:
       </p>
-      <Code>{`BORDIKO_SESSION=<cookie> REGISTRY=https://api.bordiko.com/api npm run publish:game`}</Code>
+      <Code>{`BORDIKO_TOKEN=<token> REGISTRY=https://api.bordiko.com/api npx @bordiko/cli publish`}</Code>
       <p>
         Either way, your submission is <b>tagged to your account</b> and <b>enters the review queue</b> — an admin
         reviews the code and approves it before it goes live. It sends the manifest, the base64 <code>.wasm</code>,

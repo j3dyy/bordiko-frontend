@@ -69,11 +69,11 @@ export function Home({
     setSetupFor(gameId);
   }
 
-  async function create(gameId: string, seats: number, mode: "solo" | "teams", visibility: "public" | "private", password: string, khisht: string, format: string) {
+  async function create(gameId: string, seats: number, mode: "solo" | "teams", visibility: "public" | "private", password: string, options: Record<string, unknown>) {
     setBusy(gameId);
     setErr("");
     try {
-      const lobby = await createLobby(gameId, seats, mode, visibility, password, khisht, format);
+      const lobby = await createLobby(gameId, seats, mode, visibility, password, options);
       setSetupFor("");
       onWaiting(lobby);
     } catch (e) {
@@ -181,9 +181,10 @@ export function Home({
       {setupFor && (
         <TableSetup
           gameId={setupFor}
+          options={catalog.find((c) => c.id === setupFor)?.options}
           busy={busy === setupFor}
           err={err}
-          onSubmit={(seats, mode, visibility, password, khisht, format) => create(setupFor, seats, mode, visibility, password, khisht, format)}
+          onSubmit={(seats, mode, visibility, password, options) => create(setupFor, seats, mode, visibility, password, options)}
           onClose={() => setSetupFor("")}
         />
       )}

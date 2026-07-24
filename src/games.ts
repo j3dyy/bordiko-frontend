@@ -265,9 +265,57 @@ export function playersLabel(m: { minPlayers: number; maxPlayers: number }): str
 // count of at least four). Single-count free-for-all games skip straight to the
 // table.
 export function needsTableSetup(m: { id?: string; minPlayers: number; maxPlayers: number }): boolean {
-  // Backgammon is 2-player but still offers a choice: match length (single / best-of-N).
-  if (m.id === "backgammon") return true;
+  // A game with declared table options always shows the chooser.
+  if (m.id && FALLBACK_OPTIONS[m.id]?.length) return true;
   return m.maxPlayers > m.minPlayers || (m.maxPlayers >= 4 && m.maxPlayers % 2 === 0);
+}
+
+// Built-in lobby options for first-party games not yet re-published with an
+// `options` block in their manifest. Once republished, the catalog's manifest
+// options take over (see gameOptions). Option `id` = the reducer's config key.
+const FALLBACK_OPTIONS: Record<string, GameOptionMeta[]> = {
+  backgammon: [
+    {
+      id: "bestOf", label: "Match length", type: "choice", default: 1,
+      choices: [
+        { value: 1, label: "Single", sub: "One game decides it" },
+        { value: 3, label: "Best of 3", sub: "First to 2 games" },
+        { value: 5, label: "Best of 5", sub: "First to 3 games" },
+      ],
+    },
+  ],
+  jokeri: [
+    {
+      id: "format", label: "Deal schedule", type: "choice", default: "standard",
+      choices: [
+        { value: "standard", label: "Standard", sub: "24 deals" },
+        { value: "nines", label: "Direct nines", sub: "Faster, 9-card deals" },
+      ],
+    },
+    {
+      id: "khisht", label: "Khisht (failed bid)", type: "choice", default: "spec",
+      choices: [
+        { value: "spec", label: "−100×", sub: "Classic" },
+        { value: -200, label: "−200", sub: "Flat" },
+        { value: -500, label: "−500", sub: "Harsh" },
+      ],
+    },
+  ],
+};
+
+type GameOptionMeta = {
+  id: string;
+  label: string;
+  type: "choice" | "toggle";
+  choices?: { value: string | number; label: string; sub?: string }[];
+  default: string | number | boolean;
+};
+
+// A game's lobby options: prefer what the catalog (manifest) declares; otherwise
+// the built-in fallback for a first-party game not yet re-published.
+export function gameOptions(gameId: string, catalogOptions?: GameOptionMeta[]): GameOptionMeta[] {
+  if (catalogOptions && catalogOptions.length) return catalogOptions;
+  return FALLBACK_OPTIONS[gameId] ?? [];
 }
 
 function prettify(id: string): string {
