@@ -6,6 +6,12 @@ import { lobbyFull, seatedCount } from "./wire.ts";
 import type { Lobby, Seat } from "./wire.ts";
 import { useT } from "./i18n.tsx";
 
+// Pending exit-cleanups keyed by lobby id. The waiting room schedules a
+// short-delayed cancel/stand when it unmounts (see below); a quick remount —
+// e.g. React's dev-mode StrictMode double-mount — clears it before it fires, so
+// only a real exit tears the table down.
+const pendingExit = new Map<string, ReturnType<typeof setTimeout>>();
+
 // The table room. After creating or joining a table you land here: a ring of
 // seats you can sit in (in teams mode, where you sit is which side you're on),
 // live-updated as others take their places. The host starts the match once every
@@ -33,6 +39,14 @@ export function Waiting({
   onCancelRef.current = onCancel;
   const { t } = useT();
 
+  // Latest lobby as a ref so the unmount cleanup can read it without re-running
+  // on every poll. `doneRef` guards that cleanup: once the match has started (or
+  // the player has explicitly left), leaving must NOT tear the table down.
+  const currentRef = useRef<Lobby | null>(null);
+  currentRef.current = current;
+  const doneRef = useRef(false);
+  if (current?.status === "started") doneRef.current = true;
+
   useEffect(() => {
     const poll = async () => {
       try {
@@ -49,6 +63,33 @@ export function Waiting({
       if (timer.current) window.clearInterval(timer.current);
     };
   }, [lobbyId]);
+
+  // Destroy the table when the user leaves the waiting room without starting —
+  // the browser Back button, the topbar, anything that unmounts this view, not
+  // just the Cancel/Leave buttons. The host cancels the whole table; a seated
+  // guest just stands up. Scheduled with a short delay so a StrictMode remount
+  // (which clears it on mount, above) can't tear down a live table.
+  useEffect(() => {
+    const pending = pendingExit.get(lobbyId);
+    if (pending) {
+      clearTimeout(pending);
+      pendingExit.delete(lobbyId);
+    }
+    return () => {
+      if (doneRef.current) return;
+      const l = currentRef.current;
+      if (!l || l.status !== "open") return;
+      const isHost = l.host === myId;
+      const seated = l.seats.some((s) => s.player?.id === myId);
+      if (!isHost && !seated) return;
+      const tid = setTimeout(() => {
+        pendingExit.delete(lobbyId);
+        if (isHost) void cancelLobby(l.id).catch(() => {});
+        else void standSeat(l.id).catch(() => {});
+      }, 200);
+      pendingExit.set(lobbyId, tid);
+    };
+  }, [lobbyId, myId]);
 
   // Route into an already-active match if an action reports one (resume).
   const resumeIfActive = useCallback(
@@ -117,6 +158,7 @@ export function Waiting({
 
   async function leave() {
     setActing(true);
+    doneRef.current = true; // tearing down explicitly — skip the unmount cleanup
     try {
       if (isHost) await cancelLobby(current!.id);
       else if (seated) await standSeat(current!.id).catch(() => {});
