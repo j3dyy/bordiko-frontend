@@ -217,9 +217,9 @@ function GameCard({ game, busy, onCreate, onOpen }: { game: CatalogGame; busy: b
         <div className="gc-body">
           <h3 className="gc-title">
             {m.name}
-            {m.verified && <span className="verified" title="Verified creator">✓</span>}
+            {!game.ownerName && m.verified && <span className="verified" title="Verified creator">✓</span>}
           </h3>
-          <div className="gc-creator">{m.author}</div>
+          <div className="gc-creator">{game.ownerName ? `@${game.ownerName}` : m.author}</div>
           <p className="gc-blurb">{t(`gm.${game.id}.blurb`, undefined, m.blurb)}</p>
         </div>
         <div className="gc-stats">
@@ -249,7 +249,7 @@ function Featured({ game, busy, onPlay }: { game: CatalogGame; busy: boolean; on
             {busy ? t("home.creating") : t("home.playNow")}
           </button>
           <span className="featured-meta">
-            {t("home.playersMeta", { author: m.author, players: playersLabel(m), plays: game.plays.toLocaleString() })}
+            {t("home.playersMeta", { author: game.ownerName ? `@${game.ownerName}` : m.author, players: playersLabel(m), plays: game.plays.toLocaleString() })}
             {game.ratingCount > 0 && <> · ★ {game.rating.toFixed(1)}</>}
           </span>
         </div>
