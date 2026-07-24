@@ -45,12 +45,11 @@ export function Admin({ myId }: { myId: string }) {
       const [g, u, q] = await Promise.all([adminListGames(), adminListUsers(), fetchModeration()]);
       setGames(g);
       setUsers(u);
-      // Pending first, then newest.
+      // The review queue is ONLY submissions awaiting a decision — pending versions,
+      // newest first. Published/rejected versions are not shown here (managing or
+      // deleting a whole game happens in the Games list below).
       setQueue(
-        q.sort((a, b) => {
-          if (a.status !== b.status) return a.status === "pending" ? -1 : b.status === "pending" ? 1 : 0;
-          return (b.createdAt ?? "").localeCompare(a.createdAt ?? "");
-        }),
+        q.filter((v) => v.status === "pending").sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? "")),
       );
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -66,20 +65,6 @@ export function Admin({ myId }: { myId: string }) {
     mark(key, true);
     try {
       await moderateGame(g.gameId, g.version, action, reason);
-      await load();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
-    } finally {
-      mark(key, false);
-    }
-  }
-
-  async function removeGame(g: ModerationGame) {
-    if (!window.confirm(`Delete ${g.gameId} and all its versions? This can't be undone.`)) return;
-    const key = `d:${g.gameId}`;
-    mark(key, true);
-    try {
-      await deleteGame(g.gameId);
       await load();
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -159,7 +144,7 @@ export function Admin({ myId }: { myId: string }) {
             <span className="spinner small" />
           </div>
         ) : queue.length === 0 ? (
-          <p className="admin-empty">No submissions yet.</p>
+          <p className="admin-empty">Nothing awaiting review.</p>
         ) : (
           <ul className="admin-list">
             {queue.map((g) => (
@@ -186,21 +171,12 @@ export function Admin({ myId }: { myId: string }) {
                     Approve
                   </button>
                 )}
-                {g.status !== "rejected" && (
-                  <button
-                    className="admin-toggle danger"
-                    disabled={busy[`m:${g.gameId}@${g.version}`]}
-                    onClick={() => void review(g, "reject")}
-                  >
-                    Reject
-                  </button>
-                )}
                 <button
                   className="admin-toggle danger"
-                  disabled={busy[`d:${g.gameId}`]}
-                  onClick={() => void removeGame(g)}
+                  disabled={busy[`m:${g.gameId}@${g.version}`]}
+                  onClick={() => void review(g, "reject")}
                 >
-                  Delete
+                  Reject
                 </button>
               </li>
             ))}
