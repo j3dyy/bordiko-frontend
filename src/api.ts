@@ -1,4 +1,4 @@
-import type { Lobby, LeaderRow, Providers, User, CatalogGame, AdminGame, AdminUser } from "./wire.ts";
+import type { Lobby, LeaderRow, Providers, User, CatalogGame, AdminGame, AdminUser, ModerationGame } from "./wire.ts";
 
 // Gateway base URL (auth + REST proxy + WebSocket all live here). Override at
 // build/dev time with VITE_GATEWAY_URL.
@@ -289,6 +289,71 @@ export async function adminSetUserDisabled(id: string, disabled: boolean): Promi
     body: JSON.stringify({ disabled }),
   });
   if (!res.ok) throw new Error(`setUserDisabled: ${res.status} ${await res.text()}`);
+}
+
+/* --------------------- publishing / moderation ---------------------------- */
+
+// The publish package a developer submits. `source` (base64) is required by the
+// gateway; `wasm` is base64; `ui` is raw HTML.
+export interface PublishPackage {
+  manifest: Record<string, unknown>;
+  wasm: string;
+  source: string;
+  ui?: string;
+  assets?: Record<string, string>;
+}
+
+// Self-service publish (any signed-in developer). Returns the created version row
+// (status "pending") or throws with the gateway/registry validation message.
+export async function publishGame(pkg: PublishPackage): Promise<ModerationGame> {
+  const res = await req("/api/games/publish", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(pkg),
+  });
+  if (!res.ok) {
+    const b = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+    throw new Error(b.message || b.error || `publish failed (${res.status})`);
+  }
+  return (await res.json()) as ModerationGame;
+}
+
+// The signed-in developer's own submissions + status.
+export async function fetchMyGames(): Promise<ModerationGame[]> {
+  return json<ModerationGame[]>(await req("/api/my/games"), "myGames");
+}
+
+/* -------- admin moderation -------- */
+
+export async function fetchModeration(): Promise<ModerationGame[]> {
+  return json<ModerationGame[]>(await req("/api/admin/moderation"), "moderation");
+}
+
+export async function moderateGame(
+  gameId: string,
+  version: string,
+  action: "approve" | "reject",
+  reason = "",
+): Promise<void> {
+  const res = await req(
+    `/api/admin/games/${encodeURIComponent(gameId)}/versions/${encodeURIComponent(version)}/moderate`,
+    { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action, reason }) },
+  );
+  if (!res.ok) throw new Error(`moderate: ${res.status} ${await res.text()}`);
+}
+
+// The submitted source bundle for a version (plain text) — the admin's code review.
+export async function fetchGameSource(gameId: string, version: string): Promise<string> {
+  const res = await req(
+    `/api/admin/games/${encodeURIComponent(gameId)}/versions/${encodeURIComponent(version)}/source`,
+  );
+  if (!res.ok) throw new Error(`source: ${res.status}`);
+  return res.text();
+}
+
+export async function deleteGame(gameId: string): Promise<void> {
+  const res = await req(`/api/admin/games/${encodeURIComponent(gameId)}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`delete: ${res.status} ${await res.text()}`);
 }
 
 /* ------------------------------ websocket --------------------------------- */

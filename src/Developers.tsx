@@ -1,4 +1,6 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode, type CSSProperties } from "react";
+import { publishGame, fetchMyGames } from "./api.ts";
+import type { ModerationGame } from "./wire.ts";
 
 // The in-app developer docs. A public section (no login) that teaches a
 // third-party author how to build, test, and publish a game. Content is
@@ -19,6 +21,7 @@ const PAGES: DocPage[] = [
   { id: "realtime", title: "Real-time games" },
   { id: "publishing", title: "Publishing" },
   { id: "sandbox", title: "Testing & the sandbox" },
+  { id: "publish", title: "Publish a game" },
 ];
 
 export function Developers({
@@ -71,7 +74,7 @@ export function Developers({
         </nav>
 
         <main className="docs-content">
-          <Content id={current.id} onNavigate={onNavigate} />
+          <Content id={current.id} onNavigate={onNavigate} signedIn={signedIn} />
 
           <div className="docs-pager">
             {prev ? (
@@ -124,7 +127,7 @@ function Card({ title, desc, onClick }: { title: string; desc: string; onClick: 
 
 /* -------------------------------- content ------------------------------- */
 
-function Content({ id, onNavigate }: { id: string; onNavigate: (page: string) => void }) {
+function Content({ id, onNavigate, signedIn }: { id: string; onNavigate: (page: string) => void; signedIn: boolean }) {
   switch (id) {
     case "quickstart": return <Quickstart />;
     case "game-api": return <GameApi />;
@@ -132,8 +135,217 @@ function Content({ id, onNavigate }: { id: string; onNavigate: (page: string) =>
     case "realtime": return <Realtime />;
     case "publishing": return <Publishing />;
     case "sandbox": return <Sandbox />;
+    case "publish": return <Publish signedIn={signedIn} />;
     default: return <Overview onNavigate={onNavigate} />;
   }
+}
+
+/* -------------------------- publish a game (form) ----------------------- */
+
+const BOARD_KINDS = ["custom", "grid", "hex", "network", "tableau"] as const;
+
+// Chunked base64 for the wasm (arrayBuffer → base64) without blowing the call stack.
+function toBase64(bytes: Uint8Array): string {
+  let bin = "";
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(bin);
+}
+
+function PubStatusPill({ status }: { status: string }) {
+  const c =
+    status === "published"
+      ? { bg: "#22c55e22", fg: "#15803d" }
+      : status === "rejected"
+        ? { bg: "#ef444422", fg: "#b91c1c" }
+        : { bg: "#facc1522", fg: "#b8860b" };
+  return (
+    <span
+      style={{
+        background: c.bg,
+        color: c.fg,
+        borderRadius: 999,
+        padding: "2px 10px",
+        fontSize: 12,
+        fontWeight: 600,
+        textTransform: "capitalize",
+      }}
+    >
+      {status}
+    </span>
+  );
+}
+
+function Publish({ signedIn }: { signedIn: boolean }) {
+  const [gameId, setGameId] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [version, setVersion] = useState("0.1.0");
+  const [minPlayers, setMinPlayers] = useState(2);
+  const [maxPlayers, setMaxPlayers] = useState(2);
+  const [board, setBoard] = useState<string>("custom");
+  const [category, setCategory] = useState("");
+  const [wasmFile, setWasmFile] = useState<File | null>(null);
+  const [uiFile, setUiFile] = useState<File | null>(null);
+  const [sourceFiles, setSourceFiles] = useState<File[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [mine, setMine] = useState<ModerationGame[] | null>(null);
+
+  async function loadMine() {
+    try {
+      setMine(await fetchMyGames());
+    } catch {
+      setMine([]);
+    }
+  }
+  useEffect(() => {
+    if (signedIn) void loadMine();
+  }, [signedIn]);
+
+  async function submit() {
+    setMsg(null);
+    if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(gameId)) return setMsg({ ok: false, text: "Game id must be lowercase kebab-case." });
+    if (!/^\d+\.\d+\.\d+$/.test(version)) return setMsg({ ok: false, text: "Version must be semver, e.g. 0.1.0." });
+    if (!wasmFile) return setMsg({ ok: false, text: "A compiled .wasm is required." });
+    if (sourceFiles.length === 0) return setMsg({ ok: false, text: "At least one source file is required." });
+
+    setBusy(true);
+    try {
+      const wasm = toBase64(new Uint8Array(await wasmFile.arrayBuffer()));
+      const ui = uiFile ? await uiFile.text() : "";
+      // Concatenate the chosen source files into one readable bundle.
+      const parts: string[] = [];
+      for (const f of sourceFiles) {
+        parts.push(`// ==== ${f.name} ====\n${await f.text()}`);
+      }
+      const source = btoa(unescape(encodeURIComponent(parts.join("\n\n"))));
+      const manifest: Record<string, unknown> = {
+        schema: 1,
+        gameId,
+        version,
+        displayName: displayName || gameId,
+        board,
+        players: { min: minPlayers, max: maxPlayers },
+        ...(category ? { category } : {}),
+      };
+      const created = await publishGame({ manifest, wasm, source, ...(ui ? { ui } : {}) });
+      setMsg({ ok: true, text: `Submitted — ${created.gameId}@${created.version} is now pending review.` });
+      await loadMine();
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!signedIn) {
+    return (
+      <article className="doc">
+        <h1>Publish a game</h1>
+        <p className="doc-lede">Sign in to submit a game for review.</p>
+        <Callout kind="note">
+          Publishing is self-service: sign in, upload your compiled <code>.wasm</code> plus its source, and it enters
+          the review queue. An admin reviews it before it goes live in the catalog.
+        </Callout>
+      </article>
+    );
+  }
+
+  const label: CSSProperties = { display: "block", fontSize: 13, fontWeight: 600, margin: "12px 0 4px" };
+  const input: CSSProperties = { width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #d0cbe0", font: "inherit" };
+
+  return (
+    <article className="doc">
+      <h1>Publish a game</h1>
+      <p className="doc-lede">
+        Upload your compiled game and its source. Every submission is reviewed by an admin before it appears in the
+        catalog — source is required so we can read it.
+      </p>
+
+      <div style={{ maxWidth: 560 }}>
+        <label style={label}>Game id (lowercase-kebab)</label>
+        <input style={input} value={gameId} onChange={(e) => setGameId(e.target.value.trim())} placeholder="my-game" />
+
+        <label style={label}>Display name</label>
+        <input style={input} value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="My Game" />
+
+        <div style={{ display: "flex", gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <label style={label}>Version</label>
+            <input style={input} value={version} onChange={(e) => setVersion(e.target.value.trim())} placeholder="0.1.0" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={label}>Board</label>
+            <select style={input} value={board} onChange={(e) => setBoard(e.target.value)}>
+              {BOARD_KINDS.map((b) => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <label style={label}>Min players</label>
+            <input style={input} type="number" min={1} max={10} value={minPlayers} onChange={(e) => setMinPlayers(+e.target.value)} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={label}>Max players</label>
+            <input style={input} type="number" min={1} max={10} value={maxPlayers} onChange={(e) => setMaxPlayers(+e.target.value)} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={label}>Category <span className="doc-opt">(optional)</span></label>
+            <input style={input} value={category} onChange={(e) => setCategory(e.target.value)} placeholder="strategy" />
+          </div>
+        </div>
+
+        <label style={label}>Compiled game (.wasm) — required</label>
+        <input type="file" accept=".wasm" onChange={(e) => setWasmFile(e.target.files?.[0] ?? null)} />
+
+        <label style={label}>Custom UI (ui.html) — optional</label>
+        <input type="file" accept=".html" onChange={(e) => setUiFile(e.target.files?.[0] ?? null)} />
+
+        <label style={label}>Source files — required (select one or more)</label>
+        <input type="file" multiple onChange={(e) => setSourceFiles(Array.from(e.target.files ?? []))} />
+        {sourceFiles.length > 0 && (
+          <p className="doc-opt" style={{ margin: "4px 0 0" }}>{sourceFiles.map((f) => f.name).join(", ")}</p>
+        )}
+
+        <div style={{ marginTop: 16 }}>
+          <button className="doc-card" style={{ padding: "10px 18px", cursor: "pointer" }} disabled={busy} onClick={() => void submit()}>
+            {busy ? "Submitting…" : "Submit for review"}
+          </button>
+        </div>
+
+        {msg && (
+          <div className={`doc-callout ${msg.ok ? "tip" : "warn"}`} style={{ marginTop: 12 }}>
+            <span className="doc-callout-tag">{msg.ok ? "Submitted" : "Error"}</span>
+            <div>{msg.text}</div>
+          </div>
+        )}
+      </div>
+
+      <h2 style={{ marginTop: 28 }}>My games</h2>
+      {mine === null ? (
+        <p className="doc-opt">Loading…</p>
+      ) : mine.length === 0 ? (
+        <p className="doc-opt">You haven't submitted any games yet.</p>
+      ) : (
+        <ul className="doc-list" style={{ listStyle: "none", padding: 0 }}>
+          {mine.map((g) => (
+            <li key={`${g.gameId}@${g.version}`} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #eee6f5" }}>
+              <b>{g.displayName || g.gameId}</b>
+              <span className="doc-opt">{g.gameId}@{g.version}</span>
+              <PubStatusPill status={g.status} />
+              {g.status === "rejected" && g.rejectReason && <span className="doc-opt">— {g.rejectReason}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </article>
+  );
 }
 
 function Overview({ onNavigate }: { onNavigate: (page: string) => void }) {

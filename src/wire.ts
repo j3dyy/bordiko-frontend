@@ -194,6 +194,25 @@ export interface CatalogGame {
   hasUI?: boolean; // ships a custom sandboxed UI bundle → the frontend auto-renders it
 }
 
+/* ----------------------- publishing / moderation -------------------------- */
+
+// One submitted game version, as the moderation queue (admin) and "my games"
+// (developer) list it. status: pending | published | rejected.
+export interface ModerationGame {
+  gameId: string;
+  version: string;
+  displayName: string;
+  status: "pending" | "published" | "rejected";
+  rejectReason?: string;
+  sourceBytes?: number;
+  hasUI?: boolean;
+  ownerId?: string;
+  board?: string;
+  minPlayers?: number;
+  maxPlayers?: number;
+  createdAt?: string;
+}
+
 /* ----------------------------- leaderboard -------------------------------- */
 
 export interface LeaderRow {
