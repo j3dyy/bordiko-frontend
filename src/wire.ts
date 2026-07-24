@@ -83,6 +83,21 @@ export interface EmoteMsg {
   ts: number;
 }
 
+// Rematch coordination (see the gateway hub). A player opts in with {t:"rematch"};
+// the server echoes an offer to the room, and once everyone has opted in it sends
+// a ready frame pointing both clients at the freshly created match.
+export interface RematchOfferMsg {
+  t: "rematch_offer";
+  matchId: string;
+  from: string; // player id who wants a rematch
+  name: string;
+}
+export interface RematchReadyMsg {
+  t: "rematch_ready";
+  matchId: string; // the NEW match id
+  gameId: string;
+}
+
 /* ------------------------------- accounts --------------------------------- */
 
 export interface User {

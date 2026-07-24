@@ -264,11 +264,16 @@ function TopPlayers({ gameId }: { gameId: string }) {
   const [rows, setRows] = useState<LeaderRow[]>([]);
   useEffect(() => {
     let live = true;
-    fetchLeaderboard(gameId)
-      .then((r) => live && setRows(r.slice(0, 5)))
-      .catch(() => live && setRows([]));
+    const load = () =>
+      fetchLeaderboard(gameId)
+        .then((r) => live && setRows(r.slice(0, 5)))
+        .catch(() => live && setRows([]));
+    void load();
+    // Poll so ratings refresh after games finish (otherwise Top players goes stale).
+    const id = window.setInterval(load, 8000);
     return () => {
       live = false;
+      window.clearInterval(id);
     };
   }, [gameId]);
 

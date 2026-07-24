@@ -19,9 +19,14 @@ export interface MatchConnection {
   chat: ChatMsg[];
   emotes: LiveEmote[];
   events: EventBatch | null;
+  /** Player ids who have asked for a rematch (so the UI can show "wants a rematch"). */
+  rematchOffers: string[];
+  /** Set once everyone opted in: the fresh match to jump both players into. */
+  rematchReady: { matchId: string; gameId: string } | null;
   sendMove: (type: string, payload?: Record<string, unknown>) => void;
   sendChat: (text: string) => void;
   sendEmote: (emote: string) => void;
+  sendRematch: () => void;
 }
 
 /**
@@ -36,6 +41,8 @@ export function useMatch(matchId: string, playerId: string): MatchConnection {
   const [chat, setChat] = useState<ChatMsg[]>([]);
   const [emotes, setEmotes] = useState<LiveEmote[]>([]);
   const [events, setEvents] = useState<EventBatch | null>(null);
+  const [rematchOffers, setRematchOffers] = useState<string[]>([]);
+  const [rematchReady, setRematchReady] = useState<{ matchId: string; gameId: string } | null>(null);
   const emoteId = useRef(0);
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -59,7 +66,15 @@ export function useMatch(matchId: string, playerId: string): MatchConnection {
         const list = (msg as EventsMsg).events;
         if (Array.isArray(list) && list.length) setEvents((b) => ({ seq: (b?.seq ?? 0) + 1, events: list }));
       } else if (msg.t === "move_err") {
-        setErrors((e) => [`rejected: ${msg.reason}`, ...e].slice(0, 5));
+        // "match_ended" is expected noise once a game is over (real-time games may
+        // have an input in flight as the match ends) — don't surface it as an error.
+        if (msg.reason !== "match_ended") setErrors((e) => [`rejected: ${msg.reason}`, ...e].slice(0, 5));
+      } else if (msg.t === "rematch_offer") {
+        setRematchOffers((o) => (o.includes(msg.from) ? o : [...o, msg.from]));
+      } else if (msg.t === "rematch_ready") {
+        setRematchReady({ matchId: msg.matchId, gameId: msg.gameId });
+      } else if (msg.t === "rematch_err") {
+        setErrors((e) => ["rematch failed — try again", ...e].slice(0, 5));
       } else if (msg.t === "error") {
         setErrors((e) => [`error: ${msg.message}`, ...e].slice(0, 5));
       }
@@ -102,5 +117,11 @@ export function useMatch(matchId: string, playerId: string): MatchConnection {
     [matchId],
   );
 
-  return { state, connected, errors, chat, emotes, events, sendMove, sendChat, sendEmote };
+  const sendRematch = useCallback(() => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ t: "rematch", matchId }));
+  }, [matchId]);
+
+  return { state, connected, errors, chat, emotes, events, rematchOffers, rematchReady, sendMove, sendChat, sendEmote, sendRematch };
 }

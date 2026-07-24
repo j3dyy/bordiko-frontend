@@ -34,6 +34,10 @@ export function TableSetup({
   // "nines" = direct-nines (eight 9-card deals, a faster game).
   const [jokeriFormat, setJokeriFormat] = useState("standard");
   const isJokeri = gameId === "jokeri";
+  // Backgammon only: match length. "" = a single game; "bo3"/"bo5" = best-of-N
+  // (first to a majority of game-wins). Carried over the shared `format` field.
+  const [bgFormat, setBgFormat] = useState("");
+  const isBackgammon = gameId === "backgammon";
 
   const counts: number[] = [];
   for (let n = m.minPlayers; n <= m.maxPlayers; n++) counts.push(n);
@@ -145,6 +149,30 @@ export function TableSetup({
           </div>
         )}
 
+        {isBackgammon && (
+          <div className="ts-field">
+            <span className="ts-label">Match length</span>
+            <div className="seg">
+              {(
+                [
+                  { v: "", label: "Single", sub: "One game decides it" },
+                  { v: "bo3", label: "Best of 3", sub: "First to 2 games" },
+                  { v: "bo5", label: "Best of 5", sub: "First to 3 games" },
+                ]
+              ).map((o) => (
+                <button
+                  key={o.v || "single"}
+                  className={o.v === bgFormat ? "seg-btn active" : "seg-btn"}
+                  onClick={() => setBgFormat(o.v)}
+                  title={o.sub}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="ts-field">
           <span className="ts-label">{t("ts.visibility")}</span>
           <div className="ts-formats">
@@ -180,7 +208,7 @@ export function TableSetup({
           </button>
           <button
             disabled={busy}
-            onClick={() => onSubmit(seats, teamsEligible ? mode : "solo", visibility, visibility === "private" ? password.trim() : "", isJokeri ? khisht : "", isJokeri ? jokeriFormat : "")}
+            onClick={() => onSubmit(seats, teamsEligible ? mode : "solo", visibility, visibility === "private" ? password.trim() : "", isJokeri ? khisht : "", isBackgammon ? bgFormat : isJokeri ? jokeriFormat : "")}
           >
             {busy ? t("ts.creating") : t("ts.createTable")}
           </button>

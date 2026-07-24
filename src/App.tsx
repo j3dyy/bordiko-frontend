@@ -236,6 +236,7 @@ export function App() {
           gameId={view.gameId}
           onLeave={goHome}
           onLeaderboard={() => navigate({ screen: "leaderboard", gameId: view.gameId })}
+          onRematch={(matchId, gameId) => navigate({ screen: "game", matchId, gameId })}
         />
       )}
 

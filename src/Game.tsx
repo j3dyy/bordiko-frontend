@@ -54,15 +54,23 @@ export function Game({
   gameId,
   onLeave,
   onLeaderboard,
+  onRematch,
 }: {
   matchId: string;
   playerId: string;
   gameId: string;
   onLeave: () => void;
   onLeaderboard?: () => void;
+  onRematch?: (matchId: string, gameId: string) => void;
 }) {
   const { t } = useT();
-  const { state, connected, errors, chat, emotes, events, sendMove, sendChat, sendEmote } = useMatch(matchId, playerId);
+  const { state, connected, errors, chat, emotes, events, rematchOffers, rematchReady, sendMove, sendChat, sendEmote, sendRematch } =
+    useMatch(matchId, playerId);
+  // When both players opt into a rematch the server creates a fresh match and
+  // sends its id here — jump both clients straight into it.
+  useEffect(() => {
+    if (rematchReady && onRematch) onRematch(rematchReady.matchId, rematchReady.gameId);
+  }, [rematchReady, onRematch]);
   const stageRef = useRef<HTMLDivElement>(null);
   const { isFull, toggleFullscreen } = useFullscreen(stageRef);
   const { debug, setDebug } = useDebug();
@@ -199,6 +207,8 @@ export function Game({
           onLeave={onLeave}
           onLeaderboard={onLeaderboard}
           onDismiss={() => setDismissed(true)}
+          onRematch={sendRematch}
+          rematchOffers={rematchOffers}
         />
       )}
 
@@ -344,6 +354,8 @@ function GameOver({
   onLeave,
   onLeaderboard,
   onDismiss,
+  onRematch,
+  rematchOffers,
 }: {
   result: StateMsg["result"];
   myId: string;
@@ -351,12 +363,18 @@ function GameOver({
   onLeave: () => void;
   onLeaderboard?: () => void;
   onDismiss: () => void;
+  onRematch?: () => void;
+  rematchOffers?: string[];
 }) {
   const { t } = useT();
   const o = outcomeFor(result, myId);
   const outcome = o ?? "lose";
   const title = o === "draw" ? t("go.draw") : o === "win" ? t("go.win") : t("go.lose");
   const emoji = o === "draw" ? "🤝" : o === "win" ? "🏆" : "😔";
+
+  const offers = rematchOffers ?? [];
+  const iOffered = offers.includes(myId);
+  const oppOffered = offers.some((id) => id !== myId);
 
   return (
     <div className="gameover-backdrop" onClick={onDismiss}>
@@ -366,11 +384,21 @@ function GameOver({
         <div className="go-eyebrow">{meta.emoji} {t("go.eyebrow", { game: meta.name })}</div>
         <h2 className="go-title">{title}</h2>
         {result?.reason && <p className="go-reason">{result.reason}</p>}
+        {onRematch && oppOffered && !iOffered && (
+          <p className="go-rematch-note">{t("go.rematchOffered")}</p>
+        )}
         <div className="go-actions">
+          {onRematch && (
+            iOffered ? (
+              <button disabled>{t("go.rematchWaiting")}</button>
+            ) : (
+              <button onClick={onRematch}>{oppOffered ? t("go.rematchAccept") : t("go.rematch")}</button>
+            )
+          )}
           {onLeaderboard && (
             <button className="ghost" onClick={onLeaderboard}>{t("go.viewLeaderboard")}</button>
           )}
-          <button onClick={onLeave}>{t("go.backToGames")}</button>
+          <button className="ghost" onClick={onLeave}>{t("go.backToGames")}</button>
         </div>
         <button className="go-inspect" onClick={onDismiss}>{t("go.viewBoard")}</button>
       </div>

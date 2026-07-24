@@ -125,7 +125,7 @@ export function SandboxBoard({
       className="sandbox-frame"
       src={`${GATEWAY}/api/games/${encodeURIComponent(gameId)}/ui`}
       sandbox="allow-scripts"
-      allow="fullscreen"
+      allow="fullscreen; vibrate; gamepad"
       title="game board"
       onLoad={push}
     />

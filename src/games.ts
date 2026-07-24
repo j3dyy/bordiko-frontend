@@ -264,7 +264,9 @@ export function playersLabel(m: { minPlayers: number; maxPlayers: number }): str
 // offers a choice of player count, or can be played in partnerships (an even
 // count of at least four). Single-count free-for-all games skip straight to the
 // table.
-export function needsTableSetup(m: { minPlayers: number; maxPlayers: number }): boolean {
+export function needsTableSetup(m: { id?: string; minPlayers: number; maxPlayers: number }): boolean {
+  // Backgammon is 2-player but still offers a choice: match length (single / best-of-N).
+  if (m.id === "backgammon") return true;
   return m.maxPlayers > m.minPlayers || (m.maxPlayers >= 4 && m.maxPlayers % 2 === 0);
 }
 
