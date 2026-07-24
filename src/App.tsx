@@ -254,7 +254,9 @@ export function App() {
         />
       )}
 
-      {view.screen === "leaderboard" && <Leaderboard myId={user.id} initialGameId={view.gameId} />}
+      {view.screen === "leaderboard" && (
+        <Leaderboard myId={user.id} initialGameId={view.gameId} onOpenUser={(id) => navigate({ screen: "developer", id })} />
+      )}
 
       {view.screen === "admin" &&
         (user.isAdmin ? <Admin myId={user.id} /> : <div className="admin"><p className="admin-empty">{t("admin.denied")}</p></div>)}

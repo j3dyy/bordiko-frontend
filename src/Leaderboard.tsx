@@ -4,7 +4,7 @@ import { gameMeta, friendlyName } from "./games.ts";
 import { useT } from "./i18n.tsx";
 import type { LeaderRow } from "./wire.ts";
 
-export function Leaderboard({ myId, initialGameId }: { myId: string; initialGameId?: string }) {
+export function Leaderboard({ myId, initialGameId, onOpenUser }: { myId: string; initialGameId?: string; onOpenUser?: (id: string) => void }) {
   const { t } = useT();
   const [games, setGames] = useState<string[]>([]);
   const [gameId, setGameId] = useState<string>(initialGameId ?? "");
@@ -65,8 +65,21 @@ export function Leaderboard({ myId, initialGameId }: { myId: string; initialGame
               <tr key={r.userId} className={r.userId === myId ? "me" : ""}>
                 <td className="rank">{i + 1}</td>
                 <td className="player">
-                  {r.avatarUrl && <img src={r.avatarUrl} alt="" className="lb-avatar" />}
-                  {friendlyName(r.displayName)}
+                  {onOpenUser ? (
+                    <button
+                      onClick={() => onOpenUser(r.userId)}
+                      title="View profile"
+                      style={{ background: "none", border: "none", padding: 0, font: "inherit", color: "inherit", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, textDecoration: "underline" }}
+                    >
+                      {r.avatarUrl && <img src={r.avatarUrl} alt="" className="lb-avatar" />}
+                      {friendlyName(r.displayName)}
+                    </button>
+                  ) : (
+                    <>
+                      {r.avatarUrl && <img src={r.avatarUrl} alt="" className="lb-avatar" />}
+                      {friendlyName(r.displayName)}
+                    </>
+                  )}
                 </td>
                 <td className="rating">{r.rating}</td>
                 <td>{r.wins}</td>

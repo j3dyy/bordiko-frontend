@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { fetchCatalog, fetchLeaderboard, fetchMyGames, fetchPublishToken, setUsername } from "./api.ts";
+import { fetchCatalog, fetchLeaderboard, fetchMyGames, generatePublishToken, revokePublishTokens, setMyGameEnabled, setUsername } from "./api.ts";
 import { useAuth } from "./auth.tsx";
 import { useT } from "./i18n.tsx";
 import { gameMeta } from "./games.ts";
@@ -39,12 +39,31 @@ export function Profile({
   const [tokenErr, setTokenErr] = useState("");
   const [copied, setCopied] = useState(false);
 
-  async function revealToken() {
+  async function generateToken() {
     setTokenErr("");
     try {
-      setToken((await fetchPublishToken()).token);
+      setToken((await generatePublishToken()).token);
     } catch (e) {
       setTokenErr(e instanceof Error ? e.message : String(e));
+    }
+  }
+  async function revokeTokens() {
+    if (!window.confirm("Revoke all your publish tokens? Any CLI still using one will stop working.")) return;
+    setTokenErr("");
+    try {
+      await revokePublishTokens();
+      setToken(null);
+    } catch (e) {
+      setTokenErr(e instanceof Error ? e.message : String(e));
+    }
+  }
+  async function toggleMine(g: ModerationGame) {
+    const next = !(g.enabled ?? true);
+    setMine((ms) => ms.map((x) => (x.gameId === g.gameId ? { ...x, enabled: next } : x)));
+    try {
+      await setMyGameEnabled(g.gameId, next);
+    } catch {
+      setMine((ms) => ms.map((x) => (x.gameId === g.gameId ? { ...x, enabled: !next } : x)));
     }
   }
   const { t } = useT();
@@ -200,31 +219,43 @@ export function Profile({
             {mine.map((g) => {
               const pill = MG_PILL[g.status] ?? MG_PILL.pending;
               const clickable = g.status === "published";
+              const live = g.enabled ?? true;
               return (
-                <button
+                <div
                   className="profile-game"
                   key={g.gameId}
-                  onClick={() => clickable && onOpenGame(g.gameId)}
-                  disabled={!clickable}
-                  style={{ ["--accent" as string]: gameMeta(g.gameId).accent }}
+                  style={{ ["--accent" as string]: gameMeta(g.gameId).accent, display: "flex", alignItems: "center" }}
                 >
-                  <span className="pg-emoji">{gameMeta(g.gameId).emoji}</span>
-                  <div className="pg-info">
-                    <div className="pg-name">{g.displayName || g.gameId}</div>
-                    <div className="pg-record">
-                      {g.gameId}@{g.version}
-                      {g.status === "rejected" && g.rejectReason ? ` · ${g.rejectReason}` : ""}
-                    </div>
-                  </div>
-                  <span
-                    style={{
-                      background: pill.bg, color: pill.fg, padding: "2px 9px", borderRadius: 999,
-                      fontSize: 12, fontWeight: 700, textTransform: "capitalize", alignSelf: "center",
-                    }}
+                  <button
+                    onClick={() => clickable && onOpenGame(g.gameId)}
+                    disabled={!clickable}
+                    style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0, background: "none", border: "none", padding: 0, font: "inherit", color: "inherit", textAlign: "left", cursor: clickable ? "pointer" : "default" }}
                   >
-                    {g.status}
-                  </span>
-                </button>
+                    <span className="pg-emoji">{gameMeta(g.gameId).emoji}</span>
+                    <div className="pg-info">
+                      <div className="pg-name">{g.displayName || g.gameId}</div>
+                      <div className="pg-record">
+                        {g.gameId}@{g.version}
+                        {g.status === "rejected" && g.rejectReason ? ` · ${g.rejectReason}` : ""}
+                      </div>
+                    </div>
+                  </button>
+                  {g.status === "published" ? (
+                    <span style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 8 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: live ? "#15803d" : "#b91c1c" }}>{live ? "Live" : "Disabled"}</span>
+                      <button className="ghost small" onClick={() => void toggleMine(g)}>{live ? "Disable" : "Enable"}</button>
+                    </span>
+                  ) : (
+                    <span
+                      style={{
+                        background: pill.bg, color: pill.fg, padding: "2px 9px", borderRadius: 999,
+                        fontSize: 12, fontWeight: 700, textTransform: "capitalize", marginLeft: 8,
+                      }}
+                    >
+                      {g.status}
+                    </span>
+                  )}
+                </div>
               );
             })}
           </div>
@@ -234,13 +265,15 @@ export function Profile({
       <h3 className="section-title">Publish from the CLI</h3>
       <div className="cli-token">
         <p className="hint">
-          Your developer token — paste it into the CLI as <code>BORDIKO_SESSION</code> to publish games you own
-          (they enter the review queue). Treat it like a password: anyone with it can act as you.
+          Generate a personal access token to publish games you own from the CLI (they enter the review queue).
+          It's shown once — treat it like a password. Revoke any time; revoking stops every token from working.
         </p>
-        {!token ? (
-          <button className="ghost" onClick={() => void revealToken()}>Show my publish token</button>
-        ) : (
-          <div style={{ display: "flex", gap: 8, alignItems: "flex-start", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <button className="ghost" onClick={() => void generateToken()}>{token ? "Regenerate token" : "Generate publish token"}</button>
+          <button className="ghost small" onClick={() => void revokeTokens()}>Revoke all tokens</button>
+        </div>
+        {token && (
+          <div style={{ display: "flex", gap: 8, alignItems: "flex-start", flexWrap: "wrap", marginTop: 8 }}>
             <code
               style={{
                 flex: "1 1 320px", whiteSpace: "pre-wrap", wordBreak: "break-all",
@@ -248,12 +281,12 @@ export function Profile({
                 fontSize: 12, fontFamily: "ui-monospace, monospace",
               }}
             >
-              BORDIKO_SESSION={token} npx @bordiko/cli publish
+              BORDIKO_TOKEN={token} npx @bordiko/cli publish
             </code>
             <button
               className="ghost small"
               onClick={() => {
-                void navigator.clipboard.writeText(`BORDIKO_SESSION=${token} npx @bordiko/cli publish`);
+                void navigator.clipboard.writeText(`BORDIKO_TOKEN=${token} npx @bordiko/cli publish`);
                 setCopied(true);
                 setTimeout(() => setCopied(false), 1500);
               }}

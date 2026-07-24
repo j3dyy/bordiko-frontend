@@ -1,10 +1,14 @@
-import { useEffect, useState } from "react";
-import { fetchDeveloper } from "./api.ts";
+import { useEffect, useMemo, useState } from "react";
+import { fetchCatalog, fetchDeveloper, fetchLeaderboard } from "./api.ts";
 import { gameMeta } from "./games.ts";
-import type { DeveloperProfile as DevProfile } from "./wire.ts";
+import type { DeveloperProfile as DevProfile, LeaderRow } from "./wire.ts";
 
-// A developer's PUBLIC author page: their name and the games they've published.
-// Reached from a developer-game's creator line on the game detail page.
+interface GameStat extends LeaderRow {
+  gameId: string;
+}
+
+// A user's PUBLIC profile: their name, the games they've published, and their
+// play record. Reached from a game's creator line or a leaderboard row.
 export function DeveloperProfile({
   id,
   onOpenGame,
@@ -16,6 +20,7 @@ export function DeveloperProfile({
 }) {
   const [profile, setProfile] = useState<DevProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<GameStat[]>([]);
 
   useEffect(() => {
     let live = true;
@@ -28,6 +33,35 @@ export function DeveloperProfile({
       live = false;
     };
   }, [id]);
+
+  // This user's ranking across every game they've played — assembled from the
+  // per-game leaderboards, exactly like the signed-in Profile does its own.
+  useEffect(() => {
+    let live = true;
+    setStats([]);
+    (async () => {
+      const catalog = await fetchCatalog().catch(() => []);
+      const perGame = await Promise.all(
+        catalog.map(async (g) => {
+          const rows = await fetchLeaderboard(g.id).catch(() => [] as LeaderRow[]);
+          const row = rows.find((r) => r.userId === id);
+          return row ? ({ ...row, gameId: g.id } as GameStat) : null;
+        }),
+      );
+      if (live) setStats(perGame.filter((s): s is GameStat => s !== null));
+    })();
+    return () => {
+      live = false;
+    };
+  }, [id]);
+
+  const totals = useMemo(() => {
+    const wins = stats.reduce((n, s) => n + s.wins, 0);
+    const losses = stats.reduce((n, s) => n + s.losses, 0);
+    const games = stats.reduce((n, s) => n + s.games, 0);
+    const decided = wins + losses;
+    return { wins, losses, games, winPct: decided ? Math.round((wins / decided) * 100) : 0 };
+  }, [stats]);
 
   const name = profile?.displayName || friendly(id);
 
@@ -44,10 +78,9 @@ export function DeveloperProfile({
           <div className="profile-provider">Developer</div>
         </div>
         <div className="profile-totals">
-          <div className="stat-tile">
-            <div className="stat-num">{profile?.games.length ?? 0}</div>
-            <div className="stat-lbl">Published games</div>
-          </div>
+          <div className="stat-tile"><div className="stat-num">{profile?.games.length ?? 0}</div><div className="stat-lbl">Published</div></div>
+          <div className="stat-tile"><div className="stat-num">{totals.games.toLocaleString()}</div><div className="stat-lbl">Matches</div></div>
+          <div className="stat-tile"><div className="stat-num">{totals.games ? `${totals.winPct}%` : "—"}</div><div className="stat-lbl">Win rate</div></div>
         </div>
       </section>
 
@@ -73,6 +106,31 @@ export function DeveloperProfile({
                   <div className="pg-record">
                     {g.minPlayers === g.maxPlayers ? `${g.minPlayers} players` : `${g.minPlayers}–${g.maxPlayers} players`} · {g.board}
                   </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <h3 className="section-title">Play record</h3>
+      {stats.length === 0 ? (
+        <p className="hint">No ranked games yet.</p>
+      ) : (
+        <div className="profile-games">
+          {stats.map((s) => {
+            const m = gameMeta(s.gameId);
+            const decided = s.wins + s.losses;
+            return (
+              <button className="profile-game" key={s.gameId} onClick={() => onOpenGame(s.gameId)} style={{ ["--accent" as string]: m.accent }}>
+                <span className="pg-emoji">{m.emoji}</span>
+                <div className="pg-info">
+                  <div className="pg-name">{m.name}</div>
+                  <div className="pg-record">{s.wins}W · {s.losses}L · {s.draws}D</div>
+                </div>
+                <div className="pg-nums">
+                  <div className="pg-rating">{s.rating}</div>
+                  <div className="pg-win">{decided ? `${Math.round((s.wins / decided) * 100)}%` : "—"}</div>
                 </div>
               </button>
             );
